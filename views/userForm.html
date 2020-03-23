@@ -1,29 +1,32 @@
 <!DOCTYPE html>
 <html>
-	<head>
-		<title>{{.PageTitle}}</title>
-		<meta charset="UTF-8">
-	</head>
-	
-	<body>
-		{{if .Success}}
-			
-			<a href="/">Redirect To Main Page</a>
-		{{else}}
-			<h1>{{.PageTitle}}</h1>
-			
-				<ul>
-					{{range .Errors}}
-							<li>{{.Name}}-</li>
-					{{end}}
-				</ul>
-			<form method="POST">
-				 <label>Login:</label><br />
-				 <input type="text" name="login"><br />
-				 <label>Password:</label><br />
-				 <input type="password" name="password"><br />
-				 <input type="submit">
-			</form>
-		{{end}}
-	</body>
+<head>
+    <title>{{.PageTitle}}</title>
+    <meta charset="UTF-8">
+</head>
+
+<body>
+{{if eq .PageTitle "Registration"}}
+    <a href="/autorization">Redirect To authorization page</a>
+{{else}}
+    <a href="/register">Redirect To register page</a>
+{{end}}
+
+
+<h1>{{.PageTitle}}</h1>
+
+<ul>
+    {{range .Errors}}
+        <li>{{.Name}}</li>
+    {{end}}
+</ul>
+<form method="POST">
+    <label>Login:</label><br/>
+    <input type="text" name="login"><br/>
+    <label>Password:</label><br/>
+    <input type="password" name="password"><br/>
+    <input type="submit">
+</form>
+
+</body>
 </html>

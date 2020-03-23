@@ -5,31 +5,37 @@ import (
 	"fmt"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"log"
 )
 
-func connectToDb(errors []Error) *mongo.Client {
+func connectToDb() *mongo.Client {
 	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
 	client, err := mongo.Connect(context.TODO(), clientOptions)
 
 	if err != nil {
-		errors = append(errors, Error{
-			Name: "Cannot connect to db",
-		})
+		log.Fatal("Cannot connect to db")
 	}
 
 	err = client.Ping(context.TODO(), nil)
 
 	if err != nil {
-		errors = append(errors, Error{
-			Name: "Cannot listen db",
-		})
+		log.Fatal("Cannot listen db")
 	}
 
-	fmt.Println("Connected to MongoDB!")
+	log.Println("Connected to MongoDB!")
 	return client
 }
 
-func getNeccessaryCollections(name string, client mongo.Client) *mongo.Collection {
+func disconnectFromDb() {
+	err := client.Disconnect(context.TODO())
+
+	if err != nil {
+		log.Fatal("Cannot disconnect")
+	}
+	log.Println("Disconnected from MongoDB!")
+}
+
+func getNeccessaryCollections(name string) *mongo.Collection {
 	return client.Database("test_task").Collection(name)
 }
 

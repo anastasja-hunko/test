@@ -14,10 +14,14 @@ type Document struct {
 	Content string
 }
 
+var client = connectToDb()
+
 func main() {
+	defer disconnectFromDb()
+
 	http.HandleFunc("/", index)
 	http.HandleFunc("/register", register)
-	http.HandleFunc("/autorization", authorization)
+	http.HandleFunc("/authorization", authorization)
 	http.HandleFunc("/logout", logout)
 
 	http.ListenAndServe("localhost:8181", nil)

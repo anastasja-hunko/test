@@ -1,6 +1,9 @@
 package main
 
 import (
+	"context"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"html/template"
 	"net/http"
 )
@@ -10,34 +13,41 @@ func register(w http.ResponseWriter, r *http.Request) {
 
 	registerData := UserPostData{
 		PageTitle: "Registration",
-		Success:   false,
 	}
 
 	if r.Method == http.MethodPost {
+		var collection = getNeccessaryCollections("users")
 		var errors []Error
-		c := connectToDb(errors)
 
-		//проверка на логин
-		// проверка на пароль
+		login := r.FormValue("login")
+		user := checkLoginOnExisting(login, *collection)
 
-		//получение данных
-
-		hash, _ := HashPassword(r.FormValue("password"))
-
-		user := User{
-			Login:    r.FormValue("login"),
-			Password: hash,
+		if user == (User{}) {
+			hash, _ := HashPassword(r.FormValue("password"))
+			user = User{
+				Login:    login,
+				Password: hash,
+			}
+			insertOneToCollection(*collection, user, errors)
+		} else {
+			errors = append(errors, Error{
+				Name: "User's already exist!",
+			})
 		}
-		//сохранение в БД и сессию
-		col := getNeccessaryCollections("users", *c)
-		insertOneToCollection(*col, user, errors)
 
-		if len(errors) == 0 {
+		if len(errors) != 0 {
 			registerData = UserPostData{
-				Success: true,
+				Errors: errors,
 			}
 		}
 	}
 	tmpl.Execute(w, registerData)
+}
 
+func checkLoginOnExisting(login string, collection mongo.Collection) User {
+	var user User
+
+	filter := bson.D{{"login", login}}
+	collection.FindOne(context.TODO(), filter).Decode(&user)
+	return user
 }
