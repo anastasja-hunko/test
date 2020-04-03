@@ -26,7 +26,3 @@ func main() {
 
 	http.ListenAndServe("localhost:8181", nil)
 }
-
-//registration and storage of users
-//conversation with outside world
-//user can create his Documents

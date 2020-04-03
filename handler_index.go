@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"html/template"
 	"io/ioutil"
@@ -22,7 +23,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 	session, err := store.Get(r, "session-name")
 
 	if err != nil {
-		log.Println("ccf")
+		log.Println(err)
 	}
 
 	var tmpl *template.Template
@@ -31,7 +32,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 		login := session.Values["login"]
 
 		var collection = getNeccessaryCollections("users")
-		user := checkLoginOnExisting(fmt.Sprintf("%v", login), *collection)
+		user := getUserByLogin(fmt.Sprintf("%v", login), *collection)
 
 		var docCol = getNeccessaryCollections("docs")
 		var documents []Document
@@ -43,13 +44,22 @@ func index(w http.ResponseWriter, r *http.Request) {
 			Timeout: time.Second * 2,
 		}
 
-		req, _ := http.NewRequest(http.MethodGet, url, nil)
-		//ошибку проверить
-
-		res, _ := client.Do(req)
-		body, _ := ioutil.ReadAll(res.Body)
+		req, err := http.NewRequest(http.MethodGet, url, nil)
 		var course []Course
-		_ = json.Unmarshal(body, &course)
+
+		if err != nil {
+			log.Println(err)
+		} else {
+			res, err := client.Do(req)
+			if err != nil {
+				log.Println(err)
+			} else {
+				body, err := ioutil.ReadAll(res.Body)
+				if err == nil {
+					err = json.Unmarshal(body, &course)
+				}
+			}
+		}
 
 		tmpl.Execute(w, struct {
 			User      User
@@ -69,21 +79,18 @@ func index(w http.ResponseWriter, r *http.Request) {
 func getDocumentsByUser(user User, collection mongo.Collection) []Document {
 	var docs []Document
 
-	filter := bson.D{{"userid", user.Id}}
-
-	cur, err := collection.Find(context.TODO(), filter)
-	if err != nil {
-		log.Fatal(err)
-	}
-	for cur.Next(context.TODO()) {
-
+	for d := range user.Documents {
+		var stringId = fmt.Sprint(user.Documents[d])
+		stringId = stringId[10 : len(stringId)-2]
+		ff, _ := primitive.ObjectIDFromHex(stringId)
+		filter := bson.D{{"_id", ff}}
 		var elem Document
-		err := cur.Decode(&elem)
-		if err != nil {
-			log.Fatal(err)
+		err := collection.FindOne(context.TODO(), filter).Decode(&elem)
+		elem.Id = stringId
+		if err == nil {
+			docs = append(docs, elem)
 		}
-
-		docs = append(docs, elem)
 	}
+
 	return docs
 }

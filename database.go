@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
@@ -39,14 +38,13 @@ func getNeccessaryCollections(name string) *mongo.Collection {
 	return client.Database("test_task").Collection(name)
 }
 
-func insertOneToCollection(col mongo.Collection, value interface{}, errors []Error) {
+func insertOneToCollection(col mongo.Collection, value interface{}) interface{} {
 	insertResult, err := col.InsertOne(context.TODO(), value)
-
-	if err != nil {
-		errors = append(errors, Error{
-			Name: "Cannot insert To Db",
-		})
+	if err == nil {
+		log.Println("Insertes one! id=", insertResult.InsertedID)
+		return insertResult.InsertedID
+	} else {
+		log.Fatal("Can't insert to database")
+		return ""
 	}
-
-	fmt.Println("Insertes one!", insertResult.InsertedID)
 }

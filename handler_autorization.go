@@ -28,16 +28,11 @@ func authorization(w http.ResponseWriter, r *http.Request) {
 		var errors []Error
 
 		login := r.FormValue("login")
-		user := checkLoginOnExisting(login, *collection)
+		user := getUserByLogin(login, *collection)
 		if reflect.DeepEqual(user, User{}) {
 			errors = append(errors, Error{
 				Name: "User is absent in database",
 			})
-			hash, _ := HashPassword(r.FormValue("password"))
-			user = User{
-				Login:    login,
-				Password: hash,
-			}
 		} else {
 			password := r.FormValue("password")
 			if CheckPasswordHash(password, user.Password) {

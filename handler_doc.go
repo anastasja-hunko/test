@@ -14,7 +14,7 @@ import (
 func createDocument(w http.ResponseWriter, r *http.Request) {
 	userCol := getNeccessaryCollections("users")
 	userLogin := r.URL.Query().Get("login")
-	user := checkLoginOnExisting(userLogin, *userCol)
+	user := getUserByLogin(userLogin, *userCol)
 
 	docCol := getNeccessaryCollections("docs")
 	if r.Method == http.MethodGet {
@@ -36,9 +36,22 @@ func createDocument(w http.ResponseWriter, r *http.Request) {
 		doc := Document{
 			Title:   r.FormValue("Title"),
 			Content: r.FormValue("Content"),
-			UserId:  user.Id,
 		}
-		insertOneToCollection(*docCol, doc, []Error{})
+		docId := insertOneToCollection(*docCol, doc)
+		docs := user.Documents
+		docs = append(docs, docId)
+
+		update := bson.D{
+			{"$set", bson.D{
+				{"documents", docs},
+			}},
+		}
+
+		_, err := userCol.UpdateOne(context.TODO(), user, update)
+
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		http.Redirect(w, r, "/", 302)
 	}
@@ -46,6 +59,7 @@ func createDocument(w http.ResponseWriter, r *http.Request) {
 
 func editDocument(w http.ResponseWriter, r *http.Request) {
 	docId := r.URL.Query().Get("docId")
+
 	docCol := getNeccessaryCollections("docs")
 
 	doc := getDocById(docId, *docCol)
@@ -91,18 +105,14 @@ func deleteDocument(w http.ResponseWriter, r *http.Request) {
 
 func getDocById(id interface{}, collection mongo.Collection) Document {
 	var doc Document
-	stringId := fmt.Sprint(id)
-	stringId = stringId[10 : len(stringId)-2]
-	id, _ = primitive.ObjectIDFromHex(stringId)
+	id, _ = primitive.ObjectIDFromHex(fmt.Sprint(id))
 	filter := bson.M{"_id": id}
 	collection.FindOne(context.TODO(), filter).Decode(&doc)
 	return doc
 }
 
 func deleteFromDb(id interface{}, collection mongo.Collection) {
-	stringId := fmt.Sprint(id)
-	stringId = stringId[10 : len(stringId)-2]
-	id, _ = primitive.ObjectIDFromHex(stringId)
+	id, _ = primitive.ObjectIDFromHex(fmt.Sprint(id))
 	filter := bson.M{"_id": id}
 	collection.DeleteOne(context.TODO(), filter)
 }

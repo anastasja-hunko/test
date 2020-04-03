@@ -36,6 +36,7 @@
             </thead>
             <tbody>
             {{range .Documents}}
+
                 <tr>
                     <td class="user-small">
                         <button onclick="location.href='/editDoc?docId={{.Id}}'" title="Edit a doc">
@@ -44,9 +45,9 @@
 
                     </td>
                     <td class="user-small align-content-center">
-                            <button onclick="location.href='/deleteDoc?docId={{.Id}}'" title="Delete a doc">
-                                <i class="fa fa-trash" aria-hidden="true"></i>
-                            </button>
+                        <button onclick="location.href='/deleteDoc?docId={{.Id}}'" title="Delete a doc">
+                            <i class="fa fa-trash" aria-hidden="true"></i>
+                        </button>
                     </td>
                     <td>{{.Title}}</td>
                 </tr>

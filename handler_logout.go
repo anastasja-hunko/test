@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/gorilla/sessions"
+	"log"
 	"net/http"
 )
 
@@ -9,7 +10,7 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	session, err := store.Get(r, "session-name")
 
 	if err != nil {
-		//obrabotat'
+		log.Println(err)
 	}
 
 	session.Values["authorize"] = false

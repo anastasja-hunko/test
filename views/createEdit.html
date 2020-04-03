@@ -24,7 +24,8 @@
             <label for="{{.Name}}">{{.Caption}}</label>
             {{if eq .Type "input"}}
                 {{if .Required}}
-                    <input type="text" class="form-control" value="{{.Value}}" name="{{.Name}}" id="{{.Name}}" required/>
+                    <input type="text" class="form-control" value="{{.Value}}" name="{{.Name}}" id="{{.Name}}"
+                           required/>
                 {{else}}
                     <input type="text" class="form-control" value="{{.Value}}" name="{{.Name}}" id="{{.Name}}"/>
                 {{end}}

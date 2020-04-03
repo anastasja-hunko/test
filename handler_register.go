@@ -5,6 +5,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"html/template"
+	"log"
 	"net/http"
 	"reflect"
 )
@@ -21,15 +22,20 @@ func register(w http.ResponseWriter, r *http.Request) {
 		var errors []Error
 
 		login := r.FormValue("login")
-		user := checkLoginOnExisting(login, *collection)
+		user := getUserByLogin(login, *collection)
 
 		if reflect.DeepEqual(user, User{}) {
-			hash, _ := HashPassword(r.FormValue("password"))
-			user = User{
-				Login:    login,
-				Password: hash,
+			hash, error := HashPassword(r.FormValue("password"))
+			if error == nil {
+				user = User{
+					Login:    login,
+					Password: hash,
+				}
+				insertOneToCollection(*collection, user)
+				http.Redirect(w, r, "/authorization", 302)
+			} else {
+				log.Fatal("Can't do  hashpassword")
 			}
-			insertOneToCollection(*collection, user, errors)
 		} else {
 			errors = append(errors, Error{
 				Name: "User's already exist!",
@@ -43,7 +49,7 @@ func register(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, registerData)
 }
 
-func checkLoginOnExisting(login string, collection mongo.Collection) User {
+func getUserByLogin(login string, collection mongo.Collection) User {
 	var user User
 
 	filter := bson.D{{"login", login}}

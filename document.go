@@ -1,12 +1,9 @@
 package main
 
-import "go.mongodb.org/mongo-driver/bson/primitive"
-
 type Document struct {
-	Id      primitive.ObjectID `bson:"_id"`
 	Title   string
 	Content string
-	UserId  interface{}
+	Id      string
 }
 
 type Input struct {
