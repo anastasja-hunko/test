@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"github.com/gorilla/sessions"
 	"html/template"
 	"log"
 	"net/http"
+	"reflect"
 )
 
 var store = sessions.NewCookieStore([]byte("very-secret-key"))
@@ -29,7 +29,7 @@ func authorization(w http.ResponseWriter, r *http.Request) {
 
 		login := r.FormValue("login")
 		user := checkLoginOnExisting(login, *collection)
-		if user == (User{}) {
+		if reflect.DeepEqual(user, User{}) {
 			errors = append(errors, Error{
 				Name: "User is absent in database",
 			})
@@ -41,7 +41,6 @@ func authorization(w http.ResponseWriter, r *http.Request) {
 		} else {
 			password := r.FormValue("password")
 			if CheckPasswordHash(password, user.Password) {
-				fmt.Println("whooala")
 				session.Values["authorize"] = true
 				session.Values["login"] = login
 				err = sessions.Save(r, w)
@@ -56,9 +55,7 @@ func authorization(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if len(errors) != 0 {
-			registerData = UserPostData{
-				Errors: errors,
-			}
+			registerData.Errors = errors
 		}
 	}
 	tmpl.Execute(w, registerData)

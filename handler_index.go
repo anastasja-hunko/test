@@ -1,10 +1,22 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"html/template"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
 )
+
+type Course struct {
+	Abbreviation string  `json:"Cur_Abbreviation"`
+	Rate         float64 `json:"Cur_OfficialRate"`
+}
 
 func index(w http.ResponseWriter, r *http.Request) {
 	session, err := store.Get(r, "session-name")
@@ -15,18 +27,63 @@ func index(w http.ResponseWriter, r *http.Request) {
 
 	var tmpl *template.Template
 	if session.Values["authorize"] == true {
+		tmpl = template.Must(template.ParseFiles("views/indexWhenAuthorized.html"))
 		login := session.Values["login"]
-		tmpl = template.Must(template.ParseFiles("views/authorizeMain.html"))
+
+		var collection = getNeccessaryCollections("users")
+		user := checkLoginOnExisting(fmt.Sprintf("%v", login), *collection)
+
+		var docCol = getNeccessaryCollections("docs")
+		var documents []Document
+		documents = getDocumentsByUser(user, *docCol)
+
+		url := "http://www.nbrb.by/api/exrates/rates?periodicity=0"
+
+		client := http.Client{
+			Timeout: time.Second * 2,
+		}
+
+		req, _ := http.NewRequest(http.MethodGet, url, nil)
+		//ошибку проверить
+
+		res, _ := client.Do(req)
+		body, _ := ioutil.ReadAll(res.Body)
+		var course []Course
+		_ = json.Unmarshal(body, &course)
+
 		tmpl.Execute(w, struct {
-			Login interface{}
+			User      User
+			Course    []Course
+			Documents []Document
 		}{
-			Login: login,
+			User:      user,
+			Course:    course,
+			Documents: documents,
 		})
 	} else {
-		tmpl = template.Must(template.ParseFiles("views/NonMain.html"))
+		tmpl := template.Must(template.ParseFiles("views/indexWhenNonAuthorized.html"))
 		tmpl.Execute(w, nil)
 	}
+}
 
-	// область для документов
-	// погода или курс валют
+func getDocumentsByUser(user User, collection mongo.Collection) []Document {
+	var docs []Document
+
+	filter := bson.D{{"userid", user.Id}}
+
+	cur, err := collection.Find(context.TODO(), filter)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for cur.Next(context.TODO()) {
+
+		var elem Document
+		err := cur.Decode(&elem)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		docs = append(docs, elem)
+	}
+	return docs
 }

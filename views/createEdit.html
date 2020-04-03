@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/main.css">
+    <link rel="stylesheet" href="/static/font-awesome/css/font-awesome.css">
+</head>
+<body>
+<div class="navbar-dark bg-info box-shadow user-padding-left">
+    <a class="navbar-brand" href="/">Index</a>
+    <div style="float: right">
+        <p align="right" style="align: right; display: inline;">Hello, {{.User.Login}} !</p>
+        <a class="navbar-brand" style="align: right; display: inline" href="/logout">Quit</a>
+    </div>
+</div>
+
+<div class="user-padding-left">
+    <h3>{{.Title}}</h3>
+    <hr>
+    <form method="POST">
+        {{range .Inputs}}
+            <label for="{{.Name}}">{{.Caption}}</label>
+            {{if eq .Type "input"}}
+                {{if .Required}}
+                    <input type="text" class="form-control" value="{{.Value}}" name="{{.Name}}" id="{{.Name}}" required/>
+                {{else}}
+                    <input type="text" class="form-control" value="{{.Value}}" name="{{.Name}}" id="{{.Name}}"/>
+                {{end}}
+            {{else}}
+                {{if  .Required }}
+                    <textarea class="form-control" style="width: 30%" name="{{.Name}}" id="{{.Name}}"
+                              required>{{.Value}}</textarea>
+                {{else}}
+                    <textarea class="form-control" value="{{.Value}}" style="width: 30%" name="{{.Name}}"
+                              id="{{.Name}}"></textarea>
+                {{end}}
+            {{end}}
+        {{end}}
+        <br>
+        <input type="submit">
+    </form>
+</div>
+
+
+<div class="page-footer font-small text-center user-footer">2020</div>
+
+</body>
+</html>

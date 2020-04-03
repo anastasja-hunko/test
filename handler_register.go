@@ -6,6 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"html/template"
 	"net/http"
+	"reflect"
 )
 
 func register(w http.ResponseWriter, r *http.Request) {
@@ -22,7 +23,7 @@ func register(w http.ResponseWriter, r *http.Request) {
 		login := r.FormValue("login")
 		user := checkLoginOnExisting(login, *collection)
 
-		if user == (User{}) {
+		if reflect.DeepEqual(user, User{}) {
 			hash, _ := HashPassword(r.FormValue("password"))
 			user = User{
 				Login:    login,
@@ -36,9 +37,7 @@ func register(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if len(errors) != 0 {
-			registerData = UserPostData{
-				Errors: errors,
-			}
+			registerData.Errors = errors
 		}
 	}
 	tmpl.Execute(w, registerData)

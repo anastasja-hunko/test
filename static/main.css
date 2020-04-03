@@ -1,0 +1,24 @@
+.user-footer {
+    position:absolute;
+    bottom:0;
+    width:100%;
+    height:30px;
+    background-color: bisque;
+}
+
+.user-padding-left {
+    padding-left: 15px;
+}
+
+.form-control {
+    width: 30%;
+}
+
+.user-small {
+    width: 5%;
+    text-align: center;
+}
+
+table th {
+    text-align: center;
+}
