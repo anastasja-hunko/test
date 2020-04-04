@@ -10,6 +10,7 @@ import (
 
 var store = sessions.NewCookieStore([]byte("very-secret-key"))
 
+//big piece, should be divided
 func authorization(w http.ResponseWriter, r *http.Request) {
 	session, err := store.Get(r, "session-name")
 

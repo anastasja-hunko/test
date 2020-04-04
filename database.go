@@ -25,6 +25,7 @@ func connectToDb() *mongo.Client {
 	return client
 }
 
+//such methods should bubble error
 func disconnectFromDb() {
 	err := client.Disconnect(context.TODO())
 
