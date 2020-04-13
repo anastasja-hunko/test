@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 )
 
@@ -8,26 +9,33 @@ type Error struct {
 	Name string
 }
 
-//!так нельзя делать
-var client = connectToDb()
+const (
+	serverUrl = "localhost:8181"
+)
 
 func main() {
-	defer disconnectFromDb()
-	//клиент и ошибку = коннект ту бд. + обработка ошибок
+	client, err := connectToDb()
+	if err != nil {
+		log.Println(err, "can't connect to database")
+	}
+
+	defer client.disconnectFromDb()
 
 	//file server for static content: js, css
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	//endpoints (add comments here. jpen api may
-	http.HandleFunc("/", index)
-	http.HandleFunc("/register", register)
-	http.HandleFunc("/authorization", authorization)
-	http.HandleFunc("/createDoc/", createDocument)
-	http.HandleFunc("/editDoc/", editDocument)
-	http.HandleFunc("/deleteDoc/", deleteDocument)
+	http.Handle("/", newIndexHandler(&client))
+	http.Handle("/register", newRegisterHandler(&client))
+	http.Handle("/authorization", newAuthoHandler(&client))
+
+	docHandler := newDocHandler(&client)
+	http.Handle("/createDoc/", docHandler)
+	http.Handle("/editDoc/", docHandler)
+	http.Handle("/deleteDoc/", docHandler)
 	http.HandleFunc("/logout", logout)
 
 	//init and listen server
-	http.ListenAndServe("localhost:8181", nil)
+	http.ListenAndServe(serverUrl, nil)
 }

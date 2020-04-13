@@ -1,6 +1,5 @@
 package main
 
-//read about go modules
 // bson, json tags
 //interfaces
 //constants in config

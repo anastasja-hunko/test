@@ -10,8 +10,16 @@ import (
 
 var store = sessions.NewCookieStore([]byte("very-secret-key"))
 
+type authoHandler struct {
+	client *CustomClient
+}
+
+func newAuthoHandler(client *CustomClient) *authoHandler {
+	return &authoHandler{client: client}
+}
+
 //big piece, should be divided
-func authorization(w http.ResponseWriter, r *http.Request) {
+func (h *authoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	session, err := store.Get(r, "session-name")
 
 	if err != nil {
@@ -25,7 +33,7 @@ func authorization(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodPost {
-		var collection = getNeccessaryCollections("users")
+		var collection = h.client.getCollection("users")
 		var errors []Error
 
 		login := r.FormValue("login")

@@ -2,50 +2,56 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"log"
 )
 
-func connectToDb() *mongo.Client {
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+type CustomClient struct {
+	client *mongo.Client
+}
+
+const (
+	dbUrl  = "mongodb://localhost:27017"
+	dbName = "test_task"
+)
+
+func connectToDb() (CustomClient, error) {
+	clientOptions := options.Client().ApplyURI(dbUrl)
 	client, err := mongo.Connect(context.TODO(), clientOptions)
-
-	if err != nil {
-		log.Fatal("Cannot connect to db")
-	}
-
-	err = client.Ping(context.TODO(), nil)
-
-	if err != nil {
-		log.Fatal("Cannot listen db")
-	}
-
-	log.Println("Connected to MongoDB!")
-	return client
+	customClient := CustomClient{client: client}
+	err = customClient.pingDataBase()
+	return customClient, err
 }
 
-//such methods should bubble error
-func disconnectFromDb() {
-	err := client.Disconnect(context.TODO())
-
-	if err != nil {
-		log.Fatal("Cannot disconnect")
-	}
-	log.Println("Disconnected from MongoDB!")
+func (c *CustomClient) pingDataBase() error {
+	err := c.client.Ping(context.TODO(), nil)
+	return err
 }
 
-func getNeccessaryCollections(name string) *mongo.Collection {
-	return client.Database("test_task").Collection(name)
+func (c *CustomClient) disconnectFromDb() error {
+	err := c.client.Disconnect(context.TODO())
+	return err
 }
 
-func insertOneToCollection(col mongo.Collection, value interface{}) interface{} {
-	insertResult, err := col.InsertOne(context.TODO(), value)
-	if err == nil {
-		log.Println("Insertes one! id=", insertResult.InsertedID)
-		return insertResult.InsertedID
-	} else {
-		log.Fatal("Can't insert to database")
-		return ""
-	}
+func (c *CustomClient) getCollection(name string) *mongo.Collection {
+	return c.client.Database(dbName).Collection(name)
+}
+
+func insertOneToCollection(col mongo.Collection, value interface{}) (interface{}, error) {
+	return col.InsertOne(context.TODO(), value)
+}
+
+func findOneById(col mongo.Collection, id primitive.ObjectID, elem interface{}) error {
+	filter := bson.D{{"_id", id}}
+	err := col.FindOne(context.TODO(), filter).Decode(&elem)
+	return err
+}
+
+func deleteFromDb(id interface{}, collection mongo.Collection) {
+	id, _ = primitive.ObjectIDFromHex(fmt.Sprint(id))
+	filter := bson.M{"_id": id}
+	collection.DeleteOne(context.TODO(), filter)
 }

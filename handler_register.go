@@ -5,20 +5,28 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"html/template"
-	"log"
 	"net/http"
 	"reflect"
 )
 
-func register(w http.ResponseWriter, r *http.Request) {
+type registerHandler struct {
+	client    *CustomClient
+	pageTitle string
+}
+
+func newRegisterHandler(client *CustomClient) *registerHandler {
+	return &registerHandler{client: client, pageTitle: "Registration"}
+}
+
+func (h *registerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("views/userForm.html"))
 
 	registerData := UserPostData{
-		PageTitle: "Registration",
+		PageTitle: h.pageTitle,
 	}
 
 	if r.Method == http.MethodPost {
-		var collection = getNeccessaryCollections("users")
+		var collection = h.client.getCollection("users")
 		var errors []Error
 
 		login := r.FormValue("login")
@@ -34,7 +42,7 @@ func register(w http.ResponseWriter, r *http.Request) {
 				insertOneToCollection(*collection, user)
 				http.Redirect(w, r, "/authorization", 302)
 			} else {
-				log.Fatal("Can't do  hashpassword")
+				http.Error(w, error.Error(), 500)
 			}
 		} else {
 			errors = append(errors, Error{
