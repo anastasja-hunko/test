@@ -1,8 +1,8 @@
 package main
 
 type Document struct {
-	Title   string
-	Content string
+	Title   string `bson:"title,"`
+	Content string `bson:"content,"`
 	Id      string
 }
 

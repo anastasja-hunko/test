@@ -19,7 +19,10 @@ func main() {
 		log.Println(err, "can't connect to database")
 	}
 
-	defer client.disconnectFromDb()
+	defer func() {
+		err := client.disconnectFromDb()
+		log.Println(err.Error())
+	}()
 
 	//file server for static content: js, css
 	fs := http.FileServer(http.Dir("static"))

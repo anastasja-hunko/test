@@ -20,7 +20,7 @@ func (c *CustomClient) getUserFromSession(r *http.Request) User {
 	} else {
 		login := session.Values["login"]
 		var collection = c.getCollection("users")
-		user = getUserByLogin(fmt.Sprintf("%v", login), *collection)
+		user, _ = getUserByLogin(fmt.Sprintf("%v", login), *collection)
 	}
 	return user
 }

@@ -30,7 +30,10 @@ func (h *registerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var errors []Error
 
 		login := r.FormValue("login")
-		user := getUserByLogin(login, *collection)
+		user, err := getUserByLogin(login, *collection)
+		if err != nil {
+			createErrorAndAppendToSlice(errors, err.Error())
+		}
 
 		if reflect.DeepEqual(user, User{}) {
 			hash, error := HashPassword(r.FormValue("password"))
@@ -42,12 +45,10 @@ func (h *registerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				insertOneToCollection(*collection, user)
 				http.Redirect(w, r, "/authorization", 302)
 			} else {
-				http.Error(w, error.Error(), 500)
+				createErrorAndAppendToSlice(errors, "User is not registered. Try again!")
 			}
 		} else {
-			errors = append(errors, Error{
-				Name: "User's already exist!",
-			})
+			createErrorAndAppendToSlice(errors, "User's already existed!")
 		}
 
 		if len(errors) != 0 {
@@ -57,10 +58,16 @@ func (h *registerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, registerData)
 }
 
-func getUserByLogin(login string, collection mongo.Collection) User {
+func createErrorAndAppendToSlice(errors []Error, name string) {
+	errors = append(errors, Error{
+		Name: name,
+	})
+}
+
+func getUserByLogin(login string, collection mongo.Collection) (User, error) {
 	var user User
 
 	filter := bson.D{{"login", login}}
-	collection.FindOne(context.TODO(), filter).Decode(&user)
-	return user
+	error := collection.FindOne(context.TODO(), filter).Decode(&user)
+	return user, error
 }

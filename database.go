@@ -20,7 +20,8 @@ const (
 
 func connectToDb() (CustomClient, error) {
 	clientOptions := options.Client().ApplyURI(dbUrl)
-	client, err := mongo.Connect(context.TODO(), clientOptions)
+	client, err :=
+		mongo.Connect(context.TODO(), clientOptions)
 	customClient := CustomClient{client: client}
 	err = customClient.pingDataBase()
 	return customClient, err
@@ -40,18 +41,18 @@ func (c *CustomClient) getCollection(name string) *mongo.Collection {
 	return c.client.Database(dbName).Collection(name)
 }
 
-func insertOneToCollection(col mongo.Collection, value interface{}) (interface{}, error) {
+func insertOneToCollection(col mongo.Collection, value interface{}) (*mongo.InsertOneResult, error) {
 	return col.InsertOne(context.TODO(), value)
 }
 
 func findOneById(col mongo.Collection, id primitive.ObjectID, elem interface{}) error {
 	filter := bson.D{{"_id", id}}
-	err := col.FindOne(context.TODO(), filter).Decode(&elem)
+	err := col.FindOne(context.TODO(), filter).Decode(elem)
 	return err
 }
 
 func deleteFromDb(id interface{}, collection mongo.Collection) {
-	id, _ = primitive.ObjectIDFromHex(fmt.Sprint(id))
+	id, _ = doPrettyId(fmt.Sprint(id))
 	filter := bson.M{"_id": id}
 	collection.DeleteOne(context.TODO(), filter)
 }

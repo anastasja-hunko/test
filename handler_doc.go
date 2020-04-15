@@ -39,7 +39,7 @@ func (h *docHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (h *docHandler) createDocument(w http.ResponseWriter, r *http.Request) {
 	userCol := h.client.getCollection("users")
 	userLogin := r.URL.Query().Get("login")
-	user := getUserByLogin(userLogin, *userCol)
+	user, _ := getUserByLogin(userLogin, *userCol)
 
 	if r.Method == http.MethodGet {
 		h.showDocForm(w, Document{}, "Add a new document!")
@@ -48,10 +48,10 @@ func (h *docHandler) createDocument(w http.ResponseWriter, r *http.Request) {
 			Title:   r.FormValue("Title"),
 			Content: r.FormValue("Content"),
 		}
-		docId, err := insertOneToCollection(*h.docCol, doc)
+		insertedResult, err := insertOneToCollection(*h.docCol, doc)
 
 		docs := user.Documents
-		docs = append(docs, docId)
+		docs = append(docs, insertedResult.InsertedID)
 
 		update := bson.D{
 			{"$set", bson.D{
@@ -71,13 +71,13 @@ func (h *docHandler) createDocument(w http.ResponseWriter, r *http.Request) {
 
 func (h *docHandler) editDocument(w http.ResponseWriter, r *http.Request) {
 	docId := r.URL.Query().Get("docId")
-	objectId, err := primitive.ObjectIDFromHex(fmt.Sprint(docId))
+	objectId, err := doPrettyId(fmt.Sprint(docId))
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 	}
 	var doc Document
 
-	err = findOneById(*h.docCol, objectId, doc)
+	err = findOneById(*h.docCol, objectId, &doc)
 
 	if err != nil {
 		http.Error(w, err.Error(), 500)
@@ -92,8 +92,8 @@ func (h *docHandler) editDocument(w http.ResponseWriter, r *http.Request) {
 				{"content", r.FormValue("Content")},
 			}},
 		}
-
-		_, err := h.docCol.UpdateOne(context.TODO(), doc, update)
+		filter := bson.M{"_id": objectId}
+		_, err := h.docCol.UpdateOne(context.TODO(), filter, update)
 		if err != nil {
 			log.Fatal(err)
 		}

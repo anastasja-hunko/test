@@ -37,7 +37,7 @@ func (h *authoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var errors []Error
 
 		login := r.FormValue("login")
-		user := getUserByLogin(login, *collection)
+		user, _ := getUserByLogin(login, *collection)
 		if reflect.DeepEqual(user, User{}) {
 			errors = append(errors, Error{
 				Name: "User is absent in database",

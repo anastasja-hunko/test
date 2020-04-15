@@ -38,11 +38,11 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		login := session.Values["login"]
 
 		var collection = h.client.getCollection("users")
-		user := getUserByLogin(fmt.Sprintf("%v", login), *collection)
+		user, _ := getUserByLogin(fmt.Sprintf("%v", login), *collection)
 
 		var docCol = h.client.getCollection("docs")
 		var documents []Document
-		documents = getDocumentsByUser(user, *docCol)
+		documents, _ = getDocumentsByUser(user, *docCol)
 
 		url := "http://www.nbrb.by/api/exrates/rates?periodicity=0"
 
@@ -83,26 +83,25 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getDocumentsByUser(user User, collection mongo.Collection) []Document {
+func getDocumentsByUser(user User, collection mongo.Collection) ([]Document, error) {
 	var docs []Document
 
 	for d := range user.Documents {
 		var elem Document
 		id, err := doPrettyId(fmt.Sprint(user.Documents[d]))
+		if err != nil {
+			return docs, err
+		}
+		err = findOneById(collection, id, &elem)
 		if err == nil {
-			err = findOneById(collection, id, elem)
-			if err == nil {
-				elem.Id = fmt.Sprint(user.Documents[d])
-				if err == nil {
-					docs = append(docs, elem)
-				}
+			elem.Id = fmt.Sprint(user.Documents[d])
+			if err != nil {
+				return docs, err
 			}
-		} else {
-			log.Println("Can't do normal Id")
+			docs = append(docs, elem)
 		}
 	}
-
-	return docs
+	return docs, nil
 }
 
 func doPrettyId(stringId string) (primitive.ObjectID, error) {
