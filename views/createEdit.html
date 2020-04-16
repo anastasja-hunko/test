@@ -20,7 +20,7 @@
     <h3>{{.Title}}</h3>
     <hr>
     <form method="POST">
-        {{range .Inputs}}
+        {{range .DocumentInput.Inputs}}
             <label for="{{.Name}}">{{.Caption}}</label>
             {{if eq .Type "input"}}
                 {{if .Required}}

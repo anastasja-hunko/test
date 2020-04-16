@@ -57,10 +57,3 @@ func findOneById(col mongo.Collection, id primitive.ObjectID, elem interface{}) 
 	err := col.FindOne(context.TODO(), filter).Decode(elem)
 	return err
 }
-
-func deleteFromDb(id interface{}, collection mongo.Collection) error {
-	id, _ = doPrettyId(fmt.Sprint(id))
-	filter := bson.D{primitive.E{Key: "_id", Value: id}}
-	_, err := collection.DeleteOne(context.TODO(), filter)
-	return err
-}

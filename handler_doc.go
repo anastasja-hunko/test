@@ -6,9 +6,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"html/template"
-	"log"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -23,8 +22,13 @@ func newDocHandler(client *CustomClient) *docHandler {
 }
 
 func (h *docHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	user, err := h.client.getUserFromSession(r)
 
-	user := h.client.getUserFromSession(r)
+	if err != nil {
+		fmt.Fprintf(w, "can't find user from the session : %v", err)
+		return
+	}
+
 	h.user = &user
 
 	if strings.Contains(r.URL.Path, "createDoc") {
@@ -37,74 +41,106 @@ func (h *docHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *docHandler) createDocument(w http.ResponseWriter, r *http.Request) {
-	userCol := h.client.getCollection(userColName)
-	userLogin := r.URL.Query().Get("login")
-	user, _ := getUserByLogin(userLogin, *userCol)
-
-	if r.Method == http.MethodGet {
-		h.showDocForm(w, Document{}, "Add a new document!")
-	} else {
-		doc := Document{
-			Title:   r.FormValue("Title"),
-			Content: r.FormValue("Content"),
+	var err error
+	if r.Method == http.MethodPost {
+		err = h.create(r.FormValue("Title"), r.FormValue("Content"))
+		if err == nil {
+			http.Redirect(w, r, "/", 302)
 		}
-		insertedResult, err := insertOneToCollection(*h.docCol, doc)
-		if err != nil {
-			fmt.Println("correct it")
-		}
-		docs := user.Documents
-		docs = append(docs, insertedResult.InsertedID)
-
-		update := bson.D{
-			primitive.E{Key: "$set", Value: bson.D{
-				primitive.E{Key: "documents", Value: docs},
-			}},
-		}
-		_, err = userCol.UpdateOne(context.TODO(), user, update)
-
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		http.Redirect(w, r, "/", 302)
 	}
+
+	documentInput := getDocumentInput(Document{})
+
+	h.executeDocTemplate(w, documentInput, err, "Add a new document")
+}
+
+func (h *docHandler) executeDocTemplate(w http.ResponseWriter, input DocumentInput, err error, title string) {
+	executeTemplate("views/createEdit.html", w, struct {
+		Title         string
+		DocumentInput DocumentInput
+		Error         error
+		User          User
+	}{
+		Title:         title,
+		DocumentInput: input,
+		Error:         err,
+		User:          *h.user,
+	})
+}
+func (h *docHandler) create(title string, content string) error {
+	docs := h.user.Documents
+
+	doc := Document{
+		Title:   title,
+		Content: content,
+	}
+	insertedResult, err := h.insertDocument(doc)
+	if err != nil {
+		err = fmt.Errorf("can't insert a document: %v", err)
+		return err
+	}
+	docs = append(docs, insertedResult.InsertedID)
+	return h.updateUserDocs(docs)
+}
+
+func (h *docHandler) updateUserDocs(docs []interface{}) error {
+	update := bson.D{
+		primitive.E{Key: "$set", Value: bson.D{
+			primitive.E{Key: "documents", Value: docs},
+		}},
+	}
+	return h.updateUser(update)
+}
+
+func (h *docHandler) updateUser(update primitive.D) error {
+	userCol := h.client.getCollection(userColName)
+	_, err := userCol.UpdateOne(context.TODO(), h.user, update)
+	return err
 }
 
 func (h *docHandler) editDocument(w http.ResponseWriter, r *http.Request) {
-	docId := r.URL.Query().Get("docId")
-	objectId, err := doPrettyId(fmt.Sprint(docId))
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-	}
-	var doc Document
+	var err error
 
-	err = findOneById(*h.docCol, objectId, &doc)
-
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-	}
-
-	if r.Method == http.MethodGet {
-		h.showDocForm(w, doc, "Edit the document")
-	} else {
-		update := bson.D{
-			primitive.E{Key: "$set", Value: bson.D{
-				primitive.E{Key: "title", Value: r.FormValue("Title")},
-				primitive.E{Key: "content", Value: r.FormValue("Content")},
-			}},
+	doc, err := h.getDocument(r.URL)
+	if err == nil && r.Method == http.MethodPost {
+		err = h.edit(r.FormValue("Title"), r.FormValue("Content"), doc)
+		if err == nil {
+			http.Redirect(w, r, "/", 302)
 		}
-		filter := bson.M{"_id": objectId}
-		_, err := h.docCol.UpdateOne(context.TODO(), filter, update)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		http.Redirect(w, r, "/", 302)
 	}
+
+	documentInput := getDocumentInput(doc)
+
+	h.executeDocTemplate(w, documentInput, err, "Edit the document")
 }
 
-func (h *docHandler) showDocForm(w http.ResponseWriter, doc Document, title string) {
-	tmpl := template.Must(template.ParseFiles("views/createEdit.html"))
+func (h *docHandler) edit(title string, content string, document Document) error {
+	update := bson.D{
+		primitive.E{Key: "$set", Value: bson.D{
+			primitive.E{Key: "title", Value: title},
+			primitive.E{Key: "content", Value: content},
+		}},
+	}
+	_, err := h.docCol.UpdateOne(context.TODO(), document, update)
+	return err
+}
+
+func (h *docHandler) getDocument(url *url.URL) (Document, error) {
+	var doc Document
+	id := fmt.Sprint(url.Query().Get("docId"))
+	objectId, err := doPrettyId(id)
+	if err != nil {
+		err = fmt.Errorf("can't do normal id for search %v : %v", id, err)
+		return doc, err
+	}
+	err = findOneById(*h.docCol, objectId, &doc)
+	if err != nil {
+		err = fmt.Errorf("can't find a doc with id %v : %v", objectId, err)
+	}
+	return doc, err
+}
+
+func getDocumentInput(doc Document) DocumentInput {
 	var inputs []Input
 
 	input := Input{Name: "Title", Caption: "Enter title", Type: "input", Value: doc.Title, Required: true}
@@ -112,19 +148,41 @@ func (h *docHandler) showDocForm(w http.ResponseWriter, doc Document, title stri
 	input2 := Input{Name: "Content", Caption: "Enter content", Type: "textarea", Value: doc.Content, Required: true}
 	inputs = append(inputs, input2)
 
-	documentInput := DocumentInput{inputs, title, *h.user}
-
-	err := tmpl.Execute(w, documentInput)
-	if err != nil {
-		fmt.Println("correct it")
-	}
+	return DocumentInput{inputs}
 }
 
 func (h *docHandler) deleteDocument(w http.ResponseWriter, r *http.Request) {
 	docId := r.URL.Query().Get("docId")
-	err := deleteFromDb(docId, *h.docCol)
+	id, err := doPrettyId(fmt.Sprint(docId))
 	if err != nil {
-		fmt.Println("correct it")
+		fmt.Fprintf(w, "can't do normal id for search %v : %v", docId, err)
+		return
 	}
+	err = h.deleteDoc(id)
+	if err != nil {
+		fmt.Fprintf(w, "can't delete a doc with id  %v : %v", id, err)
+		return
+	}
+	update := bson.D{
+		primitive.E{Key: "$pull", Value: bson.D{
+			primitive.E{Key: "documents", Value: id},
+		}}}
+
+	err = h.updateUser(update)
+	if err != nil {
+		fmt.Fprintf(w, "can't delete a doc from user id  %v : %v", id, err)
+		return
+	}
+
 	http.Redirect(w, r, "/", 302)
+}
+
+func (h *docHandler) deleteDoc(id primitive.ObjectID) error {
+	filter := bson.D{primitive.E{Key: "_id", Value: id}}
+	_, err := h.docCol.DeleteOne(h.client.context, filter)
+	return err
+}
+
+func (h *docHandler) insertDocument(value interface{}) (*mongo.InsertOneResult, error) {
+	return h.docCol.InsertOne(context.TODO(), value)
 }

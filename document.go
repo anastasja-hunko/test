@@ -16,6 +16,4 @@ type Input struct {
 
 type DocumentInput struct {
 	Inputs []Input
-	Title  string
-	User   User
 }
