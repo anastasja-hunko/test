@@ -64,11 +64,14 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		body, err := ioutil.ReadAll(res.Body)
 		if err == nil {
 			err = json.Unmarshal(body, &course)
+			if err != nil {
+				fmt.Println("correct it")
+			}
 		} else {
 			http.Error(w, err.Error(), 500)
 		}
 
-		tmpl.Execute(w, struct {
+		err = tmpl.Execute(w, struct {
 			User      User
 			Course    []Course
 			Documents []Document
@@ -77,9 +80,15 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Course:    course,
 			Documents: documents,
 		})
+		if err != nil {
+			fmt.Println("correct it")
+		}
 	} else {
 		tmpl := template.Must(template.ParseFiles("views/indexWhenNonAuthorized.html"))
-		tmpl.Execute(w, nil)
+		err = tmpl.Execute(w, nil)
+		if err != nil {
+			fmt.Println("correct it")
+		}
 	}
 }
 

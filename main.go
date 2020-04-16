@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 )
@@ -10,7 +11,12 @@ type Error struct {
 }
 
 const (
-	serverUrl = "localhost:8181"
+	serverUrl   = "localhost:8181"
+	sessionName = "session-name"
+	dbUrl       = "mongodb://localhost:27017"
+	dbName      = "test_task"
+	userColName = "users"
+	docColName  = "docs"
 )
 
 func main() {
@@ -40,5 +46,8 @@ func main() {
 	http.HandleFunc("/logout", logout)
 
 	//init and listen server
-	http.ListenAndServe(serverUrl, nil)
+	err = http.ListenAndServe(serverUrl, nil)
+	if err != nil {
+		fmt.Println("correct it")
+	}
 }

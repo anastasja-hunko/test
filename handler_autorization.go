@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/gorilla/sessions"
 	"html/template"
 	"log"
@@ -20,7 +21,7 @@ func newAuthoHandler(client *CustomClient) *authoHandler {
 
 //big piece, should be divided
 func (h *authoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	session, err := store.Get(r, "session-name")
+	session, err := store.Get(r, sessionName)
 
 	if err != nil {
 		log.Println("ccf")
@@ -33,7 +34,7 @@ func (h *authoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodPost {
-		var collection = h.client.getCollection("users")
+		var collection = h.client.getCollection(userColName)
 		var errors []Error
 
 		login := r.FormValue("login")
@@ -62,6 +63,8 @@ func (h *authoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			registerData.Errors = errors
 		}
 	}
-	tmpl.Execute(w, registerData)
-
+	err = tmpl.Execute(w, registerData)
+	if err != nil {
+		fmt.Println("correct it")
+	}
 }

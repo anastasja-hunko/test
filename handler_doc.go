@@ -19,7 +19,7 @@ type docHandler struct {
 }
 
 func newDocHandler(client *CustomClient) *docHandler {
-	return &docHandler{client: client, docCol: client.getCollection("docs")}
+	return &docHandler{client: client, docCol: client.getCollection(docColName)}
 }
 
 func (h *docHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +37,7 @@ func (h *docHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *docHandler) createDocument(w http.ResponseWriter, r *http.Request) {
-	userCol := h.client.getCollection("users")
+	userCol := h.client.getCollection(userColName)
 	userLogin := r.URL.Query().Get("login")
 	user, _ := getUserByLogin(userLogin, *userCol)
 
@@ -49,16 +49,17 @@ func (h *docHandler) createDocument(w http.ResponseWriter, r *http.Request) {
 			Content: r.FormValue("Content"),
 		}
 		insertedResult, err := insertOneToCollection(*h.docCol, doc)
-
+		if err != nil {
+			fmt.Println("correct it")
+		}
 		docs := user.Documents
 		docs = append(docs, insertedResult.InsertedID)
 
 		update := bson.D{
-			{"$set", bson.D{
-				{"documents", docs},
+			primitive.E{Key: "$set", Value: bson.D{
+				primitive.E{Key: "documents", Value: docs},
 			}},
 		}
-
 		_, err = userCol.UpdateOne(context.TODO(), user, update)
 
 		if err != nil {
@@ -87,9 +88,9 @@ func (h *docHandler) editDocument(w http.ResponseWriter, r *http.Request) {
 		h.showDocForm(w, doc, "Edit the document")
 	} else {
 		update := bson.D{
-			{"$set", bson.D{
-				{"title", r.FormValue("Title")},
-				{"content", r.FormValue("Content")},
+			primitive.E{Key: "$set", Value: bson.D{
+				primitive.E{Key: "title", Value: r.FormValue("Title")},
+				primitive.E{Key: "content", Value: r.FormValue("Content")},
 			}},
 		}
 		filter := bson.M{"_id": objectId}
@@ -112,19 +113,18 @@ func (h *docHandler) showDocForm(w http.ResponseWriter, doc Document, title stri
 	inputs = append(inputs, input2)
 
 	documentInput := DocumentInput{inputs, title, *h.user}
-	tmpl.Execute(w, documentInput)
+
+	err := tmpl.Execute(w, documentInput)
+	if err != nil {
+		fmt.Println("correct it")
+	}
 }
 
 func (h *docHandler) deleteDocument(w http.ResponseWriter, r *http.Request) {
 	docId := r.URL.Query().Get("docId")
-	deleteFromDb(docId, *h.docCol)
+	err := deleteFromDb(docId, *h.docCol)
+	if err != nil {
+		fmt.Println("correct it")
+	}
 	http.Redirect(w, r, "/", 302)
-}
-
-func getDocById(id interface{}, collection mongo.Collection) Document {
-	var doc Document
-	id, _ = primitive.ObjectIDFromHex(fmt.Sprint(id))
-	filter := bson.M{"_id": id}
-	collection.FindOne(context.TODO(), filter).Decode(&doc)
-	return doc
 }

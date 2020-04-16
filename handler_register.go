@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"html/template"
 	"net/http"
@@ -42,7 +44,10 @@ func (h *registerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					Login:    login,
 					Password: hash,
 				}
-				insertOneToCollection(*collection, user)
+				_, err := insertOneToCollection(*collection, user)
+				if err != nil {
+					fmt.Println("correct it")
+				}
 				http.Redirect(w, r, "/authorization", 302)
 			} else {
 				createErrorAndAppendToSlice(errors, "User is not registered. Try again!")
@@ -55,19 +60,22 @@ func (h *registerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			registerData.Errors = errors
 		}
 	}
-	tmpl.Execute(w, registerData)
+	err := tmpl.Execute(w, registerData)
+	if err != nil {
+		fmt.Println("fwerhf")
+	}
 }
 
-func createErrorAndAppendToSlice(errors []Error, name string) {
+func createErrorAndAppendToSlice(errors []Error, name string) []Error {
 	errors = append(errors, Error{
 		Name: name,
 	})
+	return errors
 }
 
 func getUserByLogin(login string, collection mongo.Collection) (User, error) {
 	var user User
-
-	filter := bson.D{{"login", login}}
+	filter := bson.D{primitive.E{Key: "login", Value: login}}
 	error := collection.FindOne(context.TODO(), filter).Decode(&user)
 	return user, error
 }

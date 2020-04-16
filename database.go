@@ -10,30 +10,28 @@ import (
 )
 
 type CustomClient struct {
-	client *mongo.Client
+	client  *mongo.Client
+	context context.Context
 }
-
-const (
-	dbUrl  = "mongodb://localhost:27017"
-	dbName = "test_task"
-)
 
 func connectToDb() (CustomClient, error) {
 	clientOptions := options.Client().ApplyURI(dbUrl)
-	client, err :=
-		mongo.Connect(context.TODO(), clientOptions)
-	customClient := CustomClient{client: client}
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+	if err != nil {
+		return CustomClient{}, err
+	}
+	customClient := CustomClient{client: client, context: context.TODO()}
 	err = customClient.pingDataBase()
 	return customClient, err
 }
 
 func (c *CustomClient) pingDataBase() error {
-	err := c.client.Ping(context.TODO(), nil)
+	err := c.client.Ping(c.context, nil)
 	return err
 }
 
 func (c *CustomClient) disconnectFromDb() error {
-	err := c.client.Disconnect(context.TODO())
+	err := c.client.Disconnect(c.context)
 	return err
 }
 
@@ -46,13 +44,14 @@ func insertOneToCollection(col mongo.Collection, value interface{}) (*mongo.Inse
 }
 
 func findOneById(col mongo.Collection, id primitive.ObjectID, elem interface{}) error {
-	filter := bson.D{{"_id", id}}
+	filter := bson.D{primitive.E{Key: "_id", Value: id}}
 	err := col.FindOne(context.TODO(), filter).Decode(elem)
 	return err
 }
 
-func deleteFromDb(id interface{}, collection mongo.Collection) {
+func deleteFromDb(id interface{}, collection mongo.Collection) error {
 	id, _ = doPrettyId(fmt.Sprint(id))
-	filter := bson.M{"_id": id}
-	collection.DeleteOne(context.TODO(), filter)
+	filter := bson.D{primitive.E{Key: "_id", Value: id}}
+	_, err := collection.DeleteOne(context.TODO(), filter)
+	return err
 }
