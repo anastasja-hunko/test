@@ -1,22 +1,14 @@
 package main
 
 import (
-	"github.com/gorilla/sessions"
-	"log"
+	"fmt"
 	"net/http"
 )
 
 func logout(w http.ResponseWriter, r *http.Request) {
-	session, err := store.Get(r, "session-name")
-
+	err := workWithSession(w, r, false, "")
 	if err != nil {
-		log.Println(err)
+		fmt.Fprint(w, err)
 	}
-
-	session.Values["authorize"] = false
-	session.Values["login"] = ""
-	err = sessions.Save(r, w)
-	if err == nil {
-		http.Redirect(w, r, "/", 302)
-	}
+	http.Redirect(w, r, "/", 302)
 }

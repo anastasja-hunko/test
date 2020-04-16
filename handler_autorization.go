@@ -22,18 +22,10 @@ func (h *authoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var resultErrors []error
 
 	if r.Method == http.MethodPost {
-		session, err := store.Get(r, sessionName)
-		if err != nil {
-			err = fmt.Errorf("can't get session with name %v", sessionName)
-			resultErrors = append(resultErrors, err)
-		}
 		login := r.FormValue("login")
 		resultErrors = h.authoriseUser(resultErrors, login, r.FormValue("password"))
-
 		if len(resultErrors) == 0 {
-			session.Values["authorize"] = true
-			session.Values["login"] = login
-			err = sessions.Save(r, w)
+			err := workWithSession(w, r, true, login)
 			if err == nil {
 				http.Redirect(w, r, "/", 302)
 			}
@@ -64,4 +56,15 @@ func (h *authoHandler) authoriseUser(resultErrors []error, login string, passwor
 		return resultErrors
 	}
 	return resultErrors
+}
+
+func workWithSession(w http.ResponseWriter, r *http.Request, authorize bool, login string) error {
+	session, err := store.Get(r, sessionName)
+	if err != nil {
+		err = fmt.Errorf("can't get session with name %v", sessionName)
+		return err
+	}
+	session.Values[sessionAuthorizeKey] = authorize
+	session.Values[sessionLoginKey] = login
+	return sessions.Save(r, w)
 }

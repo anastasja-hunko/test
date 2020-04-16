@@ -24,16 +24,16 @@ func newIndexHandler(client *CustomClient) *indexHandler {
 }
 
 func (h *indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	session, err := store.Get(r, "session-name")
+	session, err := store.Get(r, sessionName)
 
-	if err != nil || session.Values["authorize"] != true {
+	if err != nil || session.Values[sessionAuthorizeKey] != true {
 		executeTemplate("views/indexWhenNonAuthorized.html", w, nil)
 		return
 	}
 
 	course, err := getCourses()
 
-	login := session.Values["login"]
+	login := session.Values[sessionLoginKey]
 	user, err2 := h.client.getUserByLogin(fmt.Sprint(login))
 	documents, errDocs := h.getDocumentsByUser(user)
 	executeTemplate("views/indexWhenAuthorized.html", w, struct {

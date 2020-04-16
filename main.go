@@ -6,8 +6,12 @@ import (
 )
 
 const (
-	serverUrl   = "localhost:8181"
-	sessionName = "session-name"
+	serverUrl = "localhost:8181"
+
+	sessionName         = "session-name"
+	sessionLoginKey     = "login"
+	sessionAuthorizeKey = "authorize"
+
 	dbUrl       = "mongodb://localhost:27017"
 	dbName      = "test_task"
 	userColName = "users"
