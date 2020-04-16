@@ -2,75 +2,70 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"html/template"
 	"net/http"
 	"reflect"
 )
 
 type registerHandler struct {
-	client    *CustomClient
-	pageTitle string
+	client *CustomClient
 }
 
 func newRegisterHandler(client *CustomClient) *registerHandler {
-	return &registerHandler{client: client, pageTitle: "Registration"}
+	return &registerHandler{client: client}
 }
 
 func (h *registerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	tmpl := template.Must(template.ParseFiles("views/userForm.html"))
-
-	registerData := UserPostData{
-		PageTitle: h.pageTitle,
-	}
+	var errors []error
 
 	if r.Method == http.MethodPost {
-		var collection = h.client.getCollection("users")
-		var errors []Error
+		errors = h.registerUser(r, errors)
 
-		login := r.FormValue("login")
-		user, err := getUserByLogin(login, *collection)
-		if err != nil {
-			createErrorAndAppendToSlice(errors, err.Error())
-		}
-
-		if reflect.DeepEqual(user, User{}) {
-			hash, error := HashPassword(r.FormValue("password"))
-			if error == nil {
-				user = User{
-					Login:    login,
-					Password: hash,
-				}
-				_, err := insertOneToCollection(*collection, user)
-				if err != nil {
-					fmt.Println("correct it")
-				}
-				http.Redirect(w, r, "/authorization", 302)
-			} else {
-				createErrorAndAppendToSlice(errors, "User is not registered. Try again!")
-			}
-		} else {
-			createErrorAndAppendToSlice(errors, "User's already existed!")
-		}
-
-		if len(errors) != 0 {
-			registerData.Errors = errors
+		if len(errors) == 0 {
+			http.Redirect(w, r, "/authorization", 302)
 		}
 	}
-	err := tmpl.Execute(w, registerData)
-	if err != nil {
-		fmt.Println("fwerhf")
-	}
+
+	executeTemplate("views/userForm.html", w, struct {
+		PageTitle string
+		Errors    []error
+	}{
+		PageTitle: "Registration",
+		Errors:    errors,
+	})
 }
 
-func createErrorAndAppendToSlice(errors []Error, name string) []Error {
-	errors = append(errors, Error{
-		Name: name,
-	})
-	return errors
+func (h *registerHandler) registerUser(r *http.Request, resultErrors []error) []error {
+	login := r.FormValue("login")
+	user, err := h.getUserByLogin(login)
+
+	if err == nil && !reflect.DeepEqual(user, User{}) {
+		err = errors.New("user's already existed with login:" + login)
+		resultErrors = append(resultErrors, err)
+		return resultErrors
+	}
+	hash, err := HashPassword(r.FormValue("password"))
+	if err != nil {
+		err = fmt.Errorf("cannot hash pasword %v : %v", r.FormValue("password"), err)
+		resultErrors = append(resultErrors, err)
+		return resultErrors
+	}
+	user = User{
+		Login:    login,
+		Password: hash,
+	}
+	_, err = h.insertUser(user)
+
+	if err != nil {
+		err = fmt.Errorf("cannot insert user : %v", err)
+		resultErrors = append(resultErrors, err)
+		return resultErrors
+	}
+	return resultErrors
 }
 
 func getUserByLogin(login string, collection mongo.Collection) (User, error) {
@@ -78,4 +73,13 @@ func getUserByLogin(login string, collection mongo.Collection) (User, error) {
 	filter := bson.D{primitive.E{Key: "login", Value: login}}
 	error := collection.FindOne(context.TODO(), filter).Decode(&user)
 	return user, error
+}
+func (h *registerHandler) getUserByLogin(login string) (User, error) {
+	var collection = h.client.getCollection(userColName)
+	return getUserByLogin(login, *collection)
+}
+
+func (h *registerHandler) insertUser(user User) (*mongo.InsertOneResult, error) {
+	var collection = h.client.getCollection(userColName)
+	return insertOneToCollection(*collection, user)
 }

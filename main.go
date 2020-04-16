@@ -5,10 +5,6 @@ import (
 	"net/http"
 )
 
-type Error struct {
-	Name string
-}
-
 const (
 	serverUrl   = "localhost:8181"
 	sessionName = "session-name"

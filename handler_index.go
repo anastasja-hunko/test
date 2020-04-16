@@ -28,6 +28,7 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil || session.Values["authorize"] != true {
 		executeTemplate("views/indexWhenNonAuthorized.html", w, nil)
+		return
 	}
 
 	course, err := getCourses()
