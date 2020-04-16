@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -49,24 +48,13 @@ func (h *docHandler) createDocument(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	//create inputs for form
 	documentInput := getDocumentInput(Document{})
 
+	//execute template with data
 	h.executeDocTemplate(w, documentInput, err, "Add a new document")
 }
 
-func (h *docHandler) executeDocTemplate(w http.ResponseWriter, input DocumentInput, err error, title string) {
-	executeTemplate("views/createEdit.html", w, struct {
-		Title         string
-		DocumentInput DocumentInput
-		Error         error
-		User          User
-	}{
-		Title:         title,
-		DocumentInput: input,
-		Error:         err,
-		User:          *h.user,
-	})
-}
 func (h *docHandler) create(title string, content string) error {
 	docs := h.user.Documents
 
@@ -83,21 +71,6 @@ func (h *docHandler) create(title string, content string) error {
 	return h.updateUserDocs(docs)
 }
 
-func (h *docHandler) updateUserDocs(docs []interface{}) error {
-	update := bson.D{
-		primitive.E{Key: "$set", Value: bson.D{
-			primitive.E{Key: "documents", Value: docs},
-		}},
-	}
-	return h.updateUser(update)
-}
-
-func (h *docHandler) updateUser(update primitive.D) error {
-	userCol := h.client.getCollection(userColName)
-	_, err := userCol.UpdateOne(context.TODO(), h.user, update)
-	return err
-}
-
 func (h *docHandler) editDocument(w http.ResponseWriter, r *http.Request) {
 	var err error
 
@@ -109,8 +82,10 @@ func (h *docHandler) editDocument(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	//create inputs for form
 	documentInput := getDocumentInput(doc)
 
+	//execute template with data
 	h.executeDocTemplate(w, documentInput, err, "Edit the document")
 }
 
@@ -121,34 +96,22 @@ func (h *docHandler) edit(title string, content string, document Document) error
 			primitive.E{Key: "content", Value: content},
 		}},
 	}
-	_, err := h.docCol.UpdateOne(context.TODO(), document, update)
+	_, err := h.docCol.UpdateOne(h.client.context, document, update)
 	return err
 }
 
-func (h *docHandler) getDocument(url *url.URL) (Document, error) {
-	var doc Document
-	id := fmt.Sprint(url.Query().Get("docId"))
-	objectId, err := doPrettyId(id)
-	if err != nil {
-		err = fmt.Errorf("can't do normal id for search %v : %v", id, err)
-		return doc, err
-	}
-	err = findOneById(*h.docCol, objectId, &doc)
-	if err != nil {
-		err = fmt.Errorf("can't find a doc with id %v : %v", objectId, err)
-	}
-	return doc, err
-}
-
-func getDocumentInput(doc Document) DocumentInput {
-	var inputs []Input
-
-	input := Input{Name: "Title", Caption: "Enter title", Type: "input", Value: doc.Title, Required: true}
-	inputs = append(inputs, input)
-	input2 := Input{Name: "Content", Caption: "Enter content", Type: "textarea", Value: doc.Content, Required: true}
-	inputs = append(inputs, input2)
-
-	return DocumentInput{inputs}
+func (h *docHandler) executeDocTemplate(w http.ResponseWriter, input DocumentInput, err error, title string) {
+	executeTemplate("views/createEdit.html", w, struct {
+		Title         string
+		DocumentInput DocumentInput
+		Error         error
+		User          User
+	}{
+		Title:         title,
+		DocumentInput: input,
+		Error:         err,
+		User:          *h.user,
+	})
 }
 
 func (h *docHandler) deleteDocument(w http.ResponseWriter, r *http.Request) {
@@ -183,6 +146,47 @@ func (h *docHandler) deleteDoc(id primitive.ObjectID) error {
 	return err
 }
 
+func (h *docHandler) updateUserDocs(docs []interface{}) error {
+	update := bson.D{
+		primitive.E{Key: "$set", Value: bson.D{
+			primitive.E{Key: "documents", Value: docs},
+		}},
+	}
+	return h.updateUser(update)
+}
+
+func (h *docHandler) updateUser(update primitive.D) error {
+	userCol := h.client.getCollection(userColName)
+	_, err := userCol.UpdateOne(h.client.context, h.user, update)
+	return err
+}
+
+func (h *docHandler) getDocument(url *url.URL) (Document, error) {
+	var doc Document
+	id := fmt.Sprint(url.Query().Get("docId"))
+	objectId, err := doPrettyId(id)
+	if err != nil {
+		err = fmt.Errorf("can't do normal id for search %v : %v", id, err)
+		return doc, err
+	}
+	err = findOneById(*h.docCol, objectId, &doc)
+	if err != nil {
+		err = fmt.Errorf("can't find a doc with id %v : %v", objectId, err)
+	}
+	return doc, err
+}
+
+func getDocumentInput(doc Document) DocumentInput {
+	var inputs []Input
+
+	input := Input{Name: "Title", Caption: "Enter title", Type: "input", Value: doc.Title, Required: true}
+	inputs = append(inputs, input)
+	input2 := Input{Name: "Content", Caption: "Enter content", Type: "textarea", Value: doc.Content, Required: true}
+	inputs = append(inputs, input2)
+
+	return DocumentInput{inputs}
+}
+
 func (h *docHandler) insertDocument(value interface{}) (*mongo.InsertOneResult, error) {
-	return h.docCol.InsertOne(context.TODO(), value)
+	return h.docCol.InsertOne(h.client.context, value)
 }

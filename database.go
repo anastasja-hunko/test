@@ -44,8 +44,11 @@ func (c *CustomClient) getCollection(name string) *mongo.Collection {
 }
 
 func (c *CustomClient) getUserByLogin(login string) (User, error) {
-	var collection = c.getCollection(userColName)
-	return getUserByLogin(login, *collection)
+	var user User
+	filter := bson.D{primitive.E{Key: "login", Value: login}}
+	collection := c.getCollection(userColName)
+	error := collection.FindOne(c.context, filter).Decode(&user)
+	return user, error
 }
 
 func insertOneToCollection(col mongo.Collection, value interface{}) (*mongo.InsertOneResult, error) {

@@ -18,7 +18,6 @@ func (c *CustomClient) getUserFromSession(r *http.Request) (User, error) {
 		return user, err
 	}
 	login := session.Values[sessionLoginKey]
-	var collection = c.getCollection(userColName)
-	user, err = getUserByLogin(fmt.Sprint(login), *collection)
+	user, err = c.getUserByLogin(fmt.Sprint(login))
 	return user, err
 }

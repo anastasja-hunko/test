@@ -1,11 +1,8 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 	"reflect"
@@ -29,7 +26,7 @@ func (h *registerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/authorization", 302)
 		}
 	}
-
+	//execute template with data
 	executeTemplate("views/userForm.html", w, struct {
 		PageTitle string
 		Errors    []error
@@ -66,13 +63,6 @@ func (h *registerHandler) registerUser(r *http.Request, resultErrors []error) []
 		return resultErrors
 	}
 	return resultErrors
-}
-
-func getUserByLogin(login string, collection mongo.Collection) (User, error) {
-	var user User
-	filter := bson.D{primitive.E{Key: "login", Value: login}}
-	error := collection.FindOne(context.TODO(), filter).Decode(&user)
-	return user, error
 }
 
 func (h *registerHandler) insertUser(user User) (*mongo.InsertOneResult, error) {

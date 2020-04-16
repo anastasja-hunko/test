@@ -33,6 +33,7 @@ func (h *authoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	//execute template with data
 	executeTemplate("views/userForm.html", w, struct {
 		PageTitle string
 		Errors    []error

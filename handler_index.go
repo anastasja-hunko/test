@@ -27,15 +27,21 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	session, err := store.Get(r, sessionName)
 
 	if err != nil || session.Values[sessionAuthorizeKey] != true {
+		//if session is unavailable or doesn't consist authorizeKey then
+		//show register and authorize link
 		executeTemplate("views/indexWhenNonAuthorized.html", w, nil)
 		return
 	}
 
+	//get courser from nbrb
 	course, err := getCourses()
 
 	login := session.Values[sessionLoginKey]
+
 	user, err2 := h.client.getUserByLogin(fmt.Sprint(login))
 	documents, errDocs := h.getDocumentsByUser(user)
+
+	//execute template with data
 	executeTemplate("views/indexWhenAuthorized.html", w, struct {
 		User      User
 		ErrUser   error
