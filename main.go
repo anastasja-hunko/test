@@ -28,7 +28,6 @@ func main() {
 	defer func() {
 		err := client.disconnectFromDb()
 		log.Fatal(err)
-		return
 	}()
 
 	//file server for static content: js, css

@@ -4,10 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 	"html/template"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"time"
 )
@@ -28,89 +26,95 @@ func newIndexHandler(client *CustomClient) *indexHandler {
 func (h *indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	session, err := store.Get(r, "session-name")
 
-	if err != nil {
-		log.Println(err)
+	if err != nil || session.Values["authorize"] != true {
+		executeTemplate("views/indexWhenNonAuthorized.html", w, nil)
 	}
 
-	var tmpl *template.Template
-	if session.Values["authorize"] == true {
-		tmpl = template.Must(template.ParseFiles("views/indexWhenAuthorized.html"))
-		login := session.Values["login"]
+	course, err := getCourses()
 
-		var collection = h.client.getCollection("users")
-		user, _ := getUserByLogin(fmt.Sprintf("%v", login), *collection)
+	login := session.Values["login"]
+	user, err2 := h.getUserByLogin(fmt.Sprint(login))
+	documents, errDocs := h.getDocumentsByUser(user)
+	executeTemplate("views/indexWhenAuthorized.html", w, struct {
+		User      User
+		ErrUser   error
+		Course    []Course
+		ErrCourse error
+		Documents []Document
+		ErrDocs   []error
+	}{
+		User:      user,
+		ErrUser:   err2,
+		Course:    course,
+		ErrCourse: err,
+		Documents: documents,
+		ErrDocs:   errDocs,
+	})
+}
 
-		var docCol = h.client.getCollection("docs")
-		var documents []Document
-		documents, _ = getDocumentsByUser(user, *docCol)
+func getCourses() ([]Course, error) {
+	var course []Course
+	url := "http://www.nbrb.by/api/exrates/rates?periodicity=0"
 
-		url := "http://www.nbrb.by/api/exrates/rates?periodicity=0"
+	client := http.Client{
+		Timeout: time.Second * 2,
+	}
 
-		client := http.Client{
-			Timeout: time.Second * 2,
-		}
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return course, err
+	}
 
-		req, err := http.NewRequest(http.MethodGet, url, nil)
-		var course []Course
+	res, err := client.Do(req)
+	if err != nil {
+		return course, err
+	}
 
-		if err != nil {
-			http.Error(w, err.Error(), 500)
-		}
-		res, err := client.Do(req)
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return course, err
+	}
 
-		if err != nil {
-			http.Error(w, err.Error(), 500)
-		}
-		body, err := ioutil.ReadAll(res.Body)
-		if err == nil {
-			err = json.Unmarshal(body, &course)
-			if err != nil {
-				fmt.Println("correct it")
-			}
-		} else {
-			http.Error(w, err.Error(), 500)
-		}
+	err = json.Unmarshal(body, &course)
+	return course, err
+}
 
-		err = tmpl.Execute(w, struct {
-			User      User
-			Course    []Course
-			Documents []Document
-		}{
-			User:      user,
-			Course:    course,
-			Documents: documents,
-		})
-		if err != nil {
-			fmt.Println("correct it")
-		}
-	} else {
-		tmpl := template.Must(template.ParseFiles("views/indexWhenNonAuthorized.html"))
-		err = tmpl.Execute(w, nil)
-		if err != nil {
-			fmt.Println("correct it")
-		}
+func executeTemplate(page string, w http.ResponseWriter, data interface{}) {
+	tmpl := template.Must(template.ParseFiles(page))
+	err := tmpl.Execute(w, data)
+	if err != nil {
+		fmt.Fprintf(w, "Something happened when the template [page - %v] executed: %v", page, err)
 	}
 }
 
-func getDocumentsByUser(user User, collection mongo.Collection) ([]Document, error) {
+func (h *indexHandler) getDocumentsByUser(user User) ([]Document, []error) {
 	var docs []Document
+	var errors []error
+	docCol := h.client.getCollection(docColName)
 
 	for d := range user.Documents {
 		var elem Document
 		id, err := doPrettyId(fmt.Sprint(user.Documents[d]))
 		if err != nil {
-			return docs, err
+			err = fmt.Errorf("Can't do id for search in database %v: %v ", id, err)
+			errors = append(errors, err)
+			continue
 		}
-		err = findOneById(collection, id, &elem)
-		if err == nil {
-			elem.Id = fmt.Sprint(user.Documents[d])
-			if err != nil {
-				return docs, err
-			}
-			docs = append(docs, elem)
+		err = findOneById(*docCol, id, &elem)
+		if err != nil {
+			err = fmt.Errorf("Can't find document with id %v: %v ", id, err)
+			errors = append(errors, err)
+			continue
 		}
+		elem.Id = fmt.Sprint(user.Documents[d])
+		docs = append(docs, elem)
 	}
-	return docs, nil
+	return docs, errors
+}
+
+func (h *indexHandler) getUserByLogin(login string) (User, error) {
+	var collection = h.client.getCollection(userColName)
+	return getUserByLogin(login, *collection)
 }
 
 func doPrettyId(stringId string) (primitive.ObjectID, error) {
