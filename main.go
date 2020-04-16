@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 )
@@ -22,19 +21,21 @@ const (
 func main() {
 	client, err := connectToDb()
 	if err != nil {
-		log.Println(err, "can't connect to database")
+		log.Fatal(err)
+		return
 	}
 
 	defer func() {
 		err := client.disconnectFromDb()
-		log.Println(err.Error())
+		log.Fatal(err)
+		return
 	}()
 
 	//file server for static content: js, css
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
-	//endpoints (add comments here. jpen api may
+	//endpoints
 	http.Handle("/", newIndexHandler(&client))
 	http.Handle("/register", newRegisterHandler(&client))
 	http.Handle("/authorization", newAuthoHandler(&client))
@@ -48,6 +49,6 @@ func main() {
 	//init and listen server
 	err = http.ListenAndServe(serverUrl, nil)
 	if err != nil {
-		fmt.Println("correct it")
+		log.Fatal(err)
 	}
 }

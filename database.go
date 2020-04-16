@@ -18,10 +18,14 @@ func connectToDb() (CustomClient, error) {
 	clientOptions := options.Client().ApplyURI(dbUrl)
 	client, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
+		err = fmt.Errorf("Can't connect to database %v: %v ", dbUrl, err)
 		return CustomClient{}, err
 	}
 	customClient := CustomClient{client: client, context: context.TODO()}
 	err = customClient.pingDataBase()
+	if err != nil {
+		err = fmt.Errorf("Can't ping the database %v: %v ", dbUrl, err)
+	}
 	return customClient, err
 }
 
