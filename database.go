@@ -43,6 +43,11 @@ func (c *CustomClient) getCollection(name string) *mongo.Collection {
 	return c.client.Database(dbName).Collection(name)
 }
 
+func (c *CustomClient) getUserByLogin(login string) (User, error) {
+	var collection = c.getCollection(userColName)
+	return getUserByLogin(login, *collection)
+}
+
 func insertOneToCollection(col mongo.Collection, value interface{}) (*mongo.InsertOneResult, error) {
 	return col.InsertOne(context.TODO(), value)
 }

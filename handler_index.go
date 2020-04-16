@@ -34,7 +34,7 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	course, err := getCourses()
 
 	login := session.Values["login"]
-	user, err2 := h.getUserByLogin(fmt.Sprint(login))
+	user, err2 := h.client.getUserByLogin(fmt.Sprint(login))
 	documents, errDocs := h.getDocumentsByUser(user)
 	executeTemplate("views/indexWhenAuthorized.html", w, struct {
 		User      User
@@ -111,11 +111,6 @@ func (h *indexHandler) getDocumentsByUser(user User) ([]Document, []error) {
 		docs = append(docs, elem)
 	}
 	return docs, errors
-}
-
-func (h *indexHandler) getUserByLogin(login string) (User, error) {
-	var collection = h.client.getCollection(userColName)
-	return getUserByLogin(login, *collection)
 }
 
 func doPrettyId(stringId string) (primitive.ObjectID, error) {

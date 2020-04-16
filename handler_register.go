@@ -41,7 +41,7 @@ func (h *registerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (h *registerHandler) registerUser(r *http.Request, resultErrors []error) []error {
 	login := r.FormValue("login")
-	user, err := h.getUserByLogin(login)
+	user, err := h.client.getUserByLogin(login)
 
 	if err == nil && !reflect.DeepEqual(user, User{}) {
 		err = errors.New("user's already existed with login:" + login)
@@ -73,10 +73,6 @@ func getUserByLogin(login string, collection mongo.Collection) (User, error) {
 	filter := bson.D{primitive.E{Key: "login", Value: login}}
 	error := collection.FindOne(context.TODO(), filter).Decode(&user)
 	return user, error
-}
-func (h *registerHandler) getUserByLogin(login string) (User, error) {
-	var collection = h.client.getCollection(userColName)
-	return getUserByLogin(login, *collection)
 }
 
 func (h *registerHandler) insertUser(user User) (*mongo.InsertOneResult, error) {

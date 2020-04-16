@@ -1,10 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/gorilla/sessions"
-	"html/template"
-	"log"
 	"net/http"
 	"reflect"
 )
@@ -19,52 +18,50 @@ func newAuthoHandler(client *CustomClient) *authoHandler {
 	return &authoHandler{client: client}
 }
 
-//big piece, should be divided
 func (h *authoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	session, err := store.Get(r, sessionName)
-
-	if err != nil {
-		log.Println("ccf")
-	}
-
-	tmpl := template.Must(template.ParseFiles("views/userForm.html"))
-
-	registerData := UserPostData{
-		PageTitle: "Authorization",
-	}
+	var resultErrors []error
 
 	if r.Method == http.MethodPost {
-		var collection = h.client.getCollection(userColName)
-		var errors []Error
-
+		session, err := store.Get(r, sessionName)
+		if err != nil {
+			err = fmt.Errorf("can't get session with name %v", sessionName)
+			resultErrors = append(resultErrors, err)
+		}
 		login := r.FormValue("login")
-		user, _ := getUserByLogin(login, *collection)
-		if reflect.DeepEqual(user, User{}) {
-			errors = append(errors, Error{
-				Name: "User is absent in database",
-			})
-		} else {
-			password := r.FormValue("password")
-			if CheckPasswordHash(password, user.Password) {
-				session.Values["authorize"] = true
-				session.Values["login"] = login
-				err = sessions.Save(r, w)
-				if err == nil {
-					http.Redirect(w, r, "/", 302)
-				}
-			} else {
-				errors = append(errors, Error{
-					Name: "Incorrect password",
-				})
-			}
-		}
+		resultErrors = h.authoriseUser(resultErrors, login, r.FormValue("password"))
 
-		if len(errors) != 0 {
-			registerData.Errors = errors
+		if len(resultErrors) == 0 {
+			session.Values["authorize"] = true
+			session.Values["login"] = login
+			err = sessions.Save(r, w)
+			if err == nil {
+				http.Redirect(w, r, "/", 302)
+			}
+			resultErrors = append(resultErrors, err)
 		}
 	}
-	err = tmpl.Execute(w, registerData)
-	if err != nil {
-		fmt.Println("correct it")
+
+	executeTemplate("views/userForm.html", w, struct {
+		PageTitle string
+		Errors    []error
+	}{
+		PageTitle: "Authorization",
+		Errors:    resultErrors,
+	})
+}
+
+func (h *authoHandler) authoriseUser(resultErrors []error, login string, password string) []error {
+	user, err := h.client.getUserByLogin(login)
+	if err != nil || reflect.DeepEqual(user, User{}) {
+		err = errors.New("user is absent in database:" + login)
+		resultErrors = append(resultErrors, err)
+		return resultErrors
 	}
+
+	if !CheckPasswordHash(password, user.Password) {
+		err = errors.New("incorrect password")
+		resultErrors = append(resultErrors, err)
+		return resultErrors
+	}
+	return resultErrors
 }
