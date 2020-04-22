@@ -10,53 +10,59 @@ import (
 )
 
 type CustomClient struct {
-	client  *mongo.Client
-	context context.Context
+	client *mongo.Client
 }
 
-func connectToDb() (CustomClient, error) {
+func connectToDb() (*CustomClient, error) {
 	clientOptions := options.Client().ApplyURI(dbUrl)
 	client, err := mongo.Connect(context.TODO(), clientOptions)
+
 	if err != nil {
-		err = fmt.Errorf("Can't connect to database %v: %v ", dbUrl, err)
-		return CustomClient{}, err
+		return nil, fmt.Errorf("Can't connect to database %v: %v ", dbUrl, err)
 	}
-	customClient := CustomClient{client: client, context: context.TODO()}
+
+	customClient := CustomClient{client: client}
 	err = customClient.pingDataBase()
+
 	if err != nil {
-		err = fmt.Errorf("Can't ping the database %v: %v ", dbUrl, err)
+		return nil, fmt.Errorf("Can't ping the database %v: %v ", dbUrl, err)
 	}
-	return customClient, err
+
+	return &customClient, err
 }
 
 func (c *CustomClient) pingDataBase() error {
-	err := c.client.Ping(c.context, nil)
-	return err
+	return c.client.Ping(context.TODO(), nil)
 }
 
 func (c *CustomClient) disconnectFromDb() error {
-	err := c.client.Disconnect(c.context)
-	return err
+	return c.client.Disconnect(context.TODO())
 }
 
 func (c *CustomClient) getCollection(name string) *mongo.Collection {
 	return c.client.Database(dbName).Collection(name)
 }
 
-func (c *CustomClient) getUserByLogin(login string) (User, error) {
-	var user User
+func (c *CustomClient) getUserByLogin(login string) (*User, error) {
 	filter := bson.D{primitive.E{Key: "login", Value: login}}
 	collection := c.getCollection(userColName)
-	error := collection.FindOne(c.context, filter).Decode(&user)
-	return user, error
+
+	var user User
+	err := collection.FindOne(context.TODO(), filter).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, err
 }
 
-func insertOneToCollection(col mongo.Collection, value interface{}) (*mongo.InsertOneResult, error) {
+func (c *CustomClient) insertOneToCollection(colName string, value interface{}) (*mongo.InsertOneResult, error) {
+	col := c.getCollection(colName)
 	return col.InsertOne(context.TODO(), value)
 }
 
-func findOneById(col mongo.Collection, id primitive.ObjectID, elem interface{}) error {
+func (c *CustomClient) findOneById(colName string, id primitive.ObjectID, elem interface{}) error {
 	filter := bson.D{primitive.E{Key: "_id", Value: id}}
-	err := col.FindOne(context.TODO(), filter).Decode(elem)
-	return err
+	col := c.getCollection(colName)
+	return col.FindOne(context.TODO(), filter).Decode(elem)
 }
