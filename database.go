@@ -53,7 +53,7 @@ func (c *CustomClient) getUserByLogin(login string) (*User, error) {
 		return nil, err
 	}
 
-	return &user, err
+	return &user, nil
 }
 
 func (c *CustomClient) insertOneToCollection(colName string, value interface{}) (*mongo.InsertOneResult, error) {

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/gorilla/sessions"
 	"net/http"
-	"reflect"
 )
 
 var store = sessions.NewCookieStore([]byte("very-secret-key"))
@@ -23,14 +22,26 @@ func (h *authoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodPost {
 		login := r.FormValue("login")
-		resultErrors = h.authoriseUser(resultErrors, login, r.FormValue("password"))
-		if len(resultErrors) == 0 {
-			err := workWithSession(w, r, true, login)
-			if err == nil {
-				http.Redirect(w, r, "/", 302)
-			}
-			resultErrors = append(resultErrors, err)
+		err := h.authoriseUser(login, r.FormValue("password"))
+
+		if err != nil {
+			//ошибка
 		}
+
+		workWithSession(w, r, true, login)
+
+		if err != nil {
+			//
+		}
+
+		http.Redirect(w, r, "/", 302)
+		//if len(resultErrors) == 0 {
+		//	err := workWithSession(w, r, true, login)
+		//	if err == nil {
+		//		http.Redirect(w, r, "/", 302)
+		//	}
+		//	resultErrors = append(resultErrors, err)
+		//}
 	}
 
 	//execute template with data
@@ -43,28 +54,27 @@ func (h *authoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *authoHandler) authoriseUser(resultErrors []error, login string, password string) []error {
+func (h *authoHandler) authoriseUser(login string, password string) error {
 	user, err := h.client.getUserByLogin(login)
-	if err != nil || reflect.DeepEqual(user, User{}) {
-		err = errors.New("user is absent in database:" + login)
-		resultErrors = append(resultErrors, err)
-		return resultErrors
+
+	if err != nil {
+		return err
 	}
 
 	if !CheckPasswordHash(password, user.Password) {
-		err = errors.New("incorrect password")
-		resultErrors = append(resultErrors, err)
-		return resultErrors
+		return errors.New("incorrect password")
 	}
-	return resultErrors
+
+	return nil
 }
 
 func workWithSession(w http.ResponseWriter, r *http.Request, authorize bool, login string) error {
 	session, err := store.Get(r, sessionName)
+
 	if err != nil {
-		err = fmt.Errorf("can't get session with name %v", sessionName)
-		return err
+		return fmt.Errorf("can't get session with name %v", sessionName)
 	}
+
 	session.Values[sessionAuthorizeKey] = authorize
 	session.Values[sessionLoginKey] = login
 	return sessions.Save(r, w)

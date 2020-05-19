@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
-	"reflect"
 )
 
 type registerHandler struct {
@@ -40,22 +39,24 @@ func (h *registerHandler) registerUser(r *http.Request, resultErrors []error) []
 	login := r.FormValue("login")
 	user, err := h.client.getUserByLogin(login)
 
-	if err == nil && !reflect.DeepEqual(user, User{}) {
+	//check error
+	if user != nil {
 		err = errors.New("user's already existed with login:" + login)
 		resultErrors = append(resultErrors, err)
 		return resultErrors
 	}
+
 	hash, err := HashPassword(r.FormValue("password"))
 	if err != nil {
 		err = fmt.Errorf("cannot hash pasword %v : %v", r.FormValue("password"), err)
 		resultErrors = append(resultErrors, err)
 		return resultErrors
 	}
-	user = User{
+	user = &User{
 		Login:    login,
 		Password: hash,
 	}
-	_, err = h.insertUser(user)
+	_, err = h.insertUser(*user)
 
 	if err != nil {
 		err = fmt.Errorf("cannot insert user : %v", err)
@@ -66,6 +67,5 @@ func (h *registerHandler) registerUser(r *http.Request, resultErrors []error) []
 }
 
 func (h *registerHandler) insertUser(user User) (*mongo.InsertOneResult, error) {
-	var collection = h.client.getCollection(userColName)
-	return insertOneToCollection(*collection, user)
+	return h.client.insertOneToCollection(userColName, user)
 }

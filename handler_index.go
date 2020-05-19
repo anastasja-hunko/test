@@ -6,6 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"html/template"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"time"
 )
@@ -29,6 +30,7 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil || session.Values[sessionAuthorizeKey] != true {
 		//if session is unavailable or doesn't consist authorizeKey then
 		//show register and authorize link
+		log.Println(err)
 		executeTemplate("views/indexWhenNonAuthorized.html", w, nil)
 		return
 	}
@@ -39,13 +41,17 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	login := session.Values[sessionLoginKey]
 
 	user, err2 := h.client.getUserByLogin(fmt.Sprint(login))
-	documents, errDocs := h.getDocumentsByUser(user)
+	documents, docErr := h.getDocumentsByUser(user)
+
+	if docErr != nil {
+
+	}
 
 	//execute template with data
 	executeTemplate("views/indexWhenAuthorized.html", w, struct {
-		User      User
+		User      *User
 		ErrUser   error
-		Course    []Course
+		Course    *[]Course
 		ErrCourse error
 		Documents []Document
 		ErrDocs   []error
@@ -55,12 +61,12 @@ func (h *indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Course:    course,
 		ErrCourse: err,
 		Documents: documents,
-		ErrDocs:   errDocs,
+		ErrDocs:   nil,
 	})
 }
 
-func getCourses() ([]Course, error) {
-	var course []Course
+func getCourses() (*[]Course, error) {
+
 	url := "http://www.nbrb.by/api/exrates/rates?periodicity=0"
 
 	client := http.Client{
@@ -69,21 +75,22 @@ func getCourses() ([]Course, error) {
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return course, err
+		return nil, err
 	}
 
 	res, err := client.Do(req)
 	if err != nil {
-		return course, err
+		return nil, err
 	}
 
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return course, err
+		return nil, err
 	}
 
+	var course []Course
 	err = json.Unmarshal(body, &course)
-	return course, err
+	return &course, err
 }
 
 func executeTemplate(page string, w http.ResponseWriter, data interface{}) {
@@ -94,29 +101,28 @@ func executeTemplate(page string, w http.ResponseWriter, data interface{}) {
 	}
 }
 
-func (h *indexHandler) getDocumentsByUser(user User) ([]Document, []error) {
+func (h *indexHandler) getDocumentsByUser(user *User) ([]Document, error) {
 	var docs []Document
-	var errors []error
-	docCol := h.client.getCollection(docColName)
+	//var errors []error
 
 	for d := range user.Documents {
-		var elem Document
 		id, err := doPrettyId(fmt.Sprint(user.Documents[d]))
 		if err != nil {
-			err = fmt.Errorf("Can't do id for search in database %v: %v ", id, err)
-			errors = append(errors, err)
-			continue
+			return docs, fmt.Errorf("Can't do id for search in database %v: %v ", id, err)
+			//errors = append(errors, err)
+			//continue
 		}
-		err = findOneById(*docCol, id, &elem)
+		var elem Document
+		err = h.client.findOneById(docColName, id, &elem)
 		if err != nil {
-			err = fmt.Errorf("Can't find document with id %v: %v ", id, err)
-			errors = append(errors, err)
-			continue
+			return docs, fmt.Errorf("Can't find document with id %v: %v ", id, err)
+			//errors = append(errors, err)
+			//continue
 		}
 		elem.Id = fmt.Sprint(user.Documents[d])
 		docs = append(docs, elem)
 	}
-	return docs, errors
+	return docs, nil
 }
 
 func doPrettyId(stringId string) (primitive.ObjectID, error) {

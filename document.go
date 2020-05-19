@@ -1,9 +1,9 @@
 package main
 
 type Document struct {
-	Title   string `bson:"title,"`
-	Content string `bson:"content,"`
-	Id      string
+	Title   string "json:title"
+	Content string "json:content"
+	Id      string "json:id"
 }
 
 type Input struct {

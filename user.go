@@ -9,15 +9,16 @@ type User struct {
 	Login     string
 	Password  string
 	Documents []interface{}
+	//возможно тут бсоны
 }
 
-func (c *CustomClient) getUserFromSession(r *http.Request) (User, error) {
+func (c *CustomClient) getUserFromSession(r *http.Request) (*User, error) {
 	session, err := store.Get(r, sessionName)
-	var user User
+
 	if err != nil {
-		return user, err
+		return nil, err
 	}
 	login := session.Values[sessionLoginKey]
-	user, err = c.getUserByLogin(fmt.Sprint(login))
+	user, err := c.getUserByLogin(fmt.Sprint(login))
 	return user, err
 }
