@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{{.Title}}</title>
+    <title>Document work</title>
     <link rel="stylesheet" href="/static/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="/static/main.css">
     <link rel="stylesheet" href="/static/font-awesome/css/font-awesome.css">
@@ -17,7 +17,12 @@
 </div>
 
 <div class="user-padding-left">
-    <h3>{{.Title}}</h3>
+    {{if .DocumentInput.Create}}
+        <h3>Add a new document</h3>
+    {{else}}
+        <h3>Edit a document</h3>
+    {{end}}
+
     <hr>
     <form method="POST">
         {{range .DocumentInput.Inputs}}
