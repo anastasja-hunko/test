@@ -23,7 +23,7 @@ func (h *docHandler) CreateDocHandler() http.HandlerFunc {
 		user, err := h.server.getUserFromSession(r)
 		if err != nil {
 			h.server.Logger.Error(err)
-			h.server.Respond(rw, r, http.StatusBadRequest, err, h.page)
+			h.server.Error(rw, http.StatusBadRequest, err)
 			return
 		}
 
@@ -34,7 +34,7 @@ func (h *docHandler) CreateDocHandler() http.HandlerFunc {
 			err := h.create(&doc)
 			if err != nil {
 				h.server.Logger.Error(err)
-				h.server.Respond(rw, r, http.StatusBadRequest, err, h.page)
+				h.server.Error(rw, http.StatusBadRequest, err)
 				return
 			}
 			h.server.Logger.Info("document was created")
@@ -42,13 +42,13 @@ func (h *docHandler) CreateDocHandler() http.HandlerFunc {
 			return
 		}
 
-		h.showDocForm(nil, rw, r)
+		h.showDocForm(nil, rw)
 	}
 }
 
-func (h *docHandler) showDocForm(doc *model.Document, rw http.ResponseWriter, r *http.Request) {
+func (h *docHandler) showDocForm(doc *model.Document, rw http.ResponseWriter) {
 	docView := model.DocView{DocumentInput: getDocumentInput(doc), User: h.user}
-	h.server.Respond(rw, r, http.StatusOK, docView, h.page)
+	h.server.Respond(rw, http.StatusOK, docView, h.page)
 }
 
 func (h *docHandler) create(doc *model.Document) error {
@@ -68,7 +68,7 @@ func (h *docHandler) EditDocHandler() http.HandlerFunc {
 		user, err := h.server.getUserFromSession(r)
 		if err != nil {
 			h.server.Logger.Error(err)
-			h.server.Respond(rw, r, http.StatusBadRequest, err, h.page)
+			h.server.Error(rw, http.StatusBadRequest, err)
 			return
 		}
 
@@ -78,7 +78,7 @@ func (h *docHandler) EditDocHandler() http.HandlerFunc {
 
 		if err != nil {
 			h.server.Logger.Error(err)
-			h.server.Respond(rw, r, http.StatusBadRequest, err, h.page)
+			h.server.Error(rw, http.StatusBadRequest, err)
 			return
 		}
 
@@ -90,7 +90,7 @@ func (h *docHandler) EditDocHandler() http.HandlerFunc {
 
 			if err != nil {
 				h.server.Logger.Error(err)
-				h.server.Respond(rw, r, http.StatusBadRequest, err, h.page)
+				h.server.Error(rw, http.StatusBadRequest, err)
 				return
 			}
 
@@ -99,7 +99,7 @@ func (h *docHandler) EditDocHandler() http.HandlerFunc {
 			return
 		}
 
-		h.showDocForm(doc, rw, r)
+		h.showDocForm(doc, rw)
 	}
 }
 
@@ -109,12 +109,14 @@ func (h *docHandler) DeleteDocument() http.HandlerFunc {
 
 		if err != nil {
 			h.server.Logger.Error("can't get if from request: ", err)
+			h.server.Error(rw, http.StatusBadRequest, err)
 			return
 		}
 		err = h.server.DB.Document().Delete(id)
 
 		if err != nil {
 			h.server.Logger.Error("can't delete a document: ", err)
+			h.server.Error(rw, http.StatusBadRequest, err)
 			return
 		}
 
@@ -122,6 +124,7 @@ func (h *docHandler) DeleteDocument() http.HandlerFunc {
 
 		if err != nil {
 			h.server.Logger.Error("document was deleted from collection docs, but a connection with user still present: ", err)
+			h.server.Error(rw, http.StatusBadRequest, err)
 			return
 		}
 
@@ -142,6 +145,7 @@ func (h *docHandler) getDocument(url *url.URL) (*model.Document, error) {
 		return nil, err
 	}
 
+	doc.Id = objectId
 	return doc, nil
 }
 
@@ -169,5 +173,5 @@ func getDocumentInput(doc *model.Document) *model.DocumentInput {
 	input2 := model.Input{Name: "Content", Caption: "Enter content", Type: "textarea", Value: content, Required: true}
 	inputs = append(inputs, input2)
 
-	return &model.DocumentInput{&inputs, doc == nil}
+	return &model.DocumentInput{Inputs: &inputs, Create: doc == nil}
 }

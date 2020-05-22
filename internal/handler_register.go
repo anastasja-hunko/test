@@ -37,7 +37,7 @@ func (h *regHandler) HandleRegister() http.HandlerFunc {
 					Err:       err,
 				}
 				h.serv.Logger.Error(err)
-				h.serv.Respond(rw, r, http.StatusBadRequest, template, h.page)
+				h.serv.Respond(rw, http.StatusBadRequest, template, h.page)
 				return
 			}
 			template := template{
@@ -46,23 +46,23 @@ func (h *regHandler) HandleRegister() http.HandlerFunc {
 				Err:       nil,
 			}
 			h.serv.Logger.Info("User was created...")
-			h.serv.Respond(rw, r, http.StatusCreated, template, h.page)
+			h.serv.Respond(rw, http.StatusCreated, template, h.page)
 		}
 		template := template{
 			Pagetitle: h.title,
 		}
-		h.serv.Respond(rw, r, http.StatusOK, template, h.page)
+		h.serv.Respond(rw, http.StatusOK, template, h.page)
 	}
 }
 
 func (h *regHandler) registerUser(u *model.User) error {
-	user, err := h.serv.DB.User().FindByLogin(u.Login)
+	user, _ := h.serv.DB.User().FindByLogin(u.Login)
 
 	if user != nil {
 		return errors.New("user's already existed with login:" + u.Login)
 	}
 
-	err = h.serv.DB.User().Create(u)
+	err := h.serv.DB.User().Create(u)
 
 	if err != nil {
 		return err

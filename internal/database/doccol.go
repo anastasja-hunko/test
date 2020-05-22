@@ -41,6 +41,7 @@ func (dc *DocCol) FindDocumentsByUser(user *model.User) (*[]model.Document, erro
 			return &docs, fmt.Errorf("Can't find document with id %v: %v ", id, err)
 		}
 
+		elem.Id = id
 		docs = append(docs, *elem)
 	}
 	return &docs, nil

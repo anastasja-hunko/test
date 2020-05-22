@@ -46,7 +46,11 @@ func (s *Server) Start() error {
 		return err
 	}
 
-	defer s.DB.Close()
+	defer func() {
+		if err := s.DB.Close(); err != nil {
+			s.Logger.Error("can't close db connection...")
+		}
+	}()
 
 	s.Logger.Info("starting server...")
 	return http.ListenAndServe(s.config.Port, s.router)
@@ -64,14 +68,14 @@ func (s *Server) configureLogger() error {
 }
 
 func (s *Server) configureRouter() {
-	fs := http.FileServer(http.Dir("static"))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	fs := http.FileServer(http.Dir("static/"))
+	http.Handle("/static", http.StripPrefix("/static/", fs))
 
 	autorHandler := NewAutorHandler(s)
 	s.router.HandleFunc("/authorization", autorHandler.HandleAuthorize())
 
 	docHandler := NewDocHandler(s)
-	s.router.HandleFunc("/createDoc/", docHandler.CreateDocHandler())
+	s.router.HandleFunc("/createDoc", docHandler.CreateDocHandler())
 	s.router.HandleFunc("/editDoc", docHandler.EditDocHandler())
 	s.router.HandleFunc("/deleteDoc", docHandler.DeleteDocument())
 
@@ -84,13 +88,13 @@ func (s *Server) configureRouter() {
 }
 
 func (s *Server) configureDatabase() error {
-	db := db.New(s.config.DbConfig)
+	dbase := db.New(s.config.DbConfig)
 
-	if err := db.Open(); err != nil {
+	if err := dbase.Open(); err != nil {
 		return err
 	}
 
-	s.DB = db
+	s.DB = dbase
 	return nil
 }
 
@@ -99,7 +103,7 @@ func executeTemplate(page string, w http.ResponseWriter, data interface{}) error
 	return tmpl.Execute(w, data)
 }
 
-func (s *Server) Respond(rw http.ResponseWriter, r *http.Request, code int, data interface{}, page string) {
+func (s *Server) Respond(rw http.ResponseWriter, code int, data interface{}, page string) {
 	rw.WriteHeader(code)
 	if data != nil {
 		if err := executeTemplate(page, rw, data); err != nil {
@@ -107,6 +111,10 @@ func (s *Server) Respond(rw http.ResponseWriter, r *http.Request, code int, data
 			fmt.Fprint(rw, data)
 		}
 	}
+}
+
+func (s *Server) Error(rw http.ResponseWriter, code int, err error) {
+	s.Respond(rw, code, err, "views/error.html")
 }
 
 func (s *Server) workWithSession(w http.ResponseWriter, r *http.Request, login string) error {

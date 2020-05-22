@@ -33,8 +33,8 @@ func (c *Database) Open() error {
 	return nil
 }
 
-func (c *Database) Close() {
-	c.db.Client().Disconnect(context.TODO())
+func (c *Database) Close() error {
+	return c.db.Client().Disconnect(context.TODO())
 }
 
 func (c *Database) User() *UserCol {

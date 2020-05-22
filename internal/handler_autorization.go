@@ -37,7 +37,7 @@ func (h *autorHandler) HandleAuthorize() http.HandlerFunc {
 					Err:       err,
 				}
 				h.serv.Logger.Error("User was not authorized: ", err)
-				h.serv.Respond(rw, r, http.StatusUnauthorized, template, h.page)
+				h.serv.Respond(rw, http.StatusUnauthorized, template, h.page)
 				return
 			}
 			h.serv.Logger.Info("User was authorized... ")
@@ -55,8 +55,7 @@ func (h *autorHandler) HandleAuthorize() http.HandlerFunc {
 		template := template{
 			Pagetitle: h.title,
 		}
-		h.serv.Respond(rw, r, http.StatusOK, template, h.page)
-		return
+		h.serv.Respond(rw, http.StatusOK, template, h.page)
 	}
 }
 
@@ -64,7 +63,7 @@ func (h *autorHandler) authorize(u *model.User) error {
 	user, err := h.serv.DB.User().FindByLogin(u.Login)
 
 	if err != nil || !user.ComparePasswords(u.Password) {
-		errors.New("incorrect password or login")
+		return errors.New("incorrect password or login")
 	}
 
 	return nil

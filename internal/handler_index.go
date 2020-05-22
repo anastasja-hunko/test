@@ -30,7 +30,7 @@ func (h *indexHandler) HandleIndex() http.HandlerFunc {
 		if err != nil {
 			h.serv.Logger.Error(err)
 			h.page = "views/indexWhenNonAuthorized.html"
-			h.serv.Respond(w, r, http.StatusBadRequest, err, h.page)
+			h.serv.Error(w, http.StatusBadRequest, err)
 			return
 		}
 		h.page = "views/indexWhenAuthorized.html"
@@ -39,7 +39,7 @@ func (h *indexHandler) HandleIndex() http.HandlerFunc {
 
 		if err != nil {
 			h.serv.Logger.Error(err)
-			h.serv.Respond(w, r, http.StatusBadRequest, err, h.page)
+			h.serv.Error(w, http.StatusBadRequest, err)
 			return
 		}
 
@@ -47,11 +47,11 @@ func (h *indexHandler) HandleIndex() http.HandlerFunc {
 
 		if err != nil {
 			h.serv.Logger.Error(err)
-			h.serv.Respond(w, r, http.StatusBadRequest, err, h.page)
+			h.serv.Error(w, http.StatusBadRequest, err)
 			return
 		}
 
-		h.serv.Respond(w, r, http.StatusOK, struct {
+		h.serv.Respond(w, http.StatusOK, struct {
 			User      model.User
 			Course    []Course
 			Documents []model.Document
@@ -96,7 +96,7 @@ func (h *indexHandler) Logout() http.HandlerFunc {
 		err := h.serv.workWithSession(rw, r, "")
 		if err != nil {
 			h.serv.Logger.Error(err)
-			h.serv.Respond(rw, r, http.StatusBadRequest, err, h.page)
+			h.serv.Error(rw, http.StatusBadRequest, err)
 			return
 		}
 		h.serv.Logger.Info("Logout")
