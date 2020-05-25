@@ -63,13 +63,16 @@ func (dc *DocCol) Create(d *model.Document) (*mongo.InsertOneResult, error) {
 }
 
 func (dc *DocCol) Edit(document *model.Document) error {
+	filter := bson.D{primitive.E{Key: "_id", Value: document.Id}}
+
 	update := bson.D{
 		primitive.E{Key: "$set", Value: bson.D{
 			primitive.E{Key: "title", Value: document.Title},
 			primitive.E{Key: "content", Value: document.Content},
 		}},
 	}
-	_, err := dc.col.UpdateOne(context.TODO(), document, update)
+	_, err := dc.col.UpdateOne(context.TODO(), filter, update)
+
 	return err
 }
 
