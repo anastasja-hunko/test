@@ -2,12 +2,10 @@ package internal
 
 import (
 	"fmt"
-	"github.com/anastasja-hunko/test/internal/model"
-	"github.com/gorilla/sessions"
-
-	//"fmt"
 	db "github.com/anastasja-hunko/test/internal/database"
+	"github.com/anastasja-hunko/test/internal/model"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 	"github.com/sirupsen/logrus"
 	"html/template"
 	"net/http"
@@ -68,8 +66,8 @@ func (s *Server) configureLogger() error {
 }
 
 func (s *Server) configureRouter() {
-	fs := http.FileServer(http.Dir("static/"))
-	http.Handle("/static", http.StripPrefix("/static/", fs))
+	fs := http.FileServer(http.Dir("static"))
+	http.Handle("/static", http.StripPrefix("/static", fs))
 
 	autorHandler := NewAutorHandler(s)
 	s.router.HandleFunc("/authorization", autorHandler.HandleAuthorize())
@@ -85,6 +83,11 @@ func (s *Server) configureRouter() {
 
 	registerHandler := NewRegHandler(s)
 	s.router.HandleFunc("/register", registerHandler.HandleRegister())
+
+	socketHandler := NewSocketHandler(s)
+
+	s.router.HandleFunc("/try", socketHandler.Try())
+
 }
 
 func (s *Server) configureDatabase() error {

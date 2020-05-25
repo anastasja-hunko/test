@@ -6,7 +6,6 @@ type User struct {
 	Login     string `bson:"login,"`
 	Password  string `bson:"password,"`
 	Documents []interface{}
-	//возможно тут бсоны
 }
 
 func (u *User) BeforeCreate() error {

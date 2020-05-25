@@ -8,7 +8,26 @@
     <link rel="stylesheet" href="/static/font-awesome/css/font-awesome.css">
     <script type="text/javascript" src="/static/jquery.js"></script>
     <script type="text/javascript" src="/static/project.js"></script>
+    <script type="text/javascript">
+        function myWebsocketStart()
+        {
+            var ws = new WebSocket("ws://localhost:8181/getCourses");
 
+            ws.onmessage = function (evt)
+            {
+                var myTextArea = document.getElementById("textarea1");
+                myTextArea.value = myTextArea.value + "\n" + evt.data
+            };
+
+            ws.onclose = function()
+            {
+                var myTextArea = document.getElementById("textarea1");
+                myTextArea.value = myTextArea.value + "\n" + "Connection closed";
+            };
+
+        }
+
+    </script>
 </head>
 <body>
 <header>
@@ -20,7 +39,33 @@
         </div>
     </div>
 </header>
+<script type="text/javascript">
+    function myWebsocketStart()
+    {
+        var ws = new WebSocket("ws://localhost:8181/try");
 
+        ws.onmessage = function (evt)
+        {
+            var div = document.getElementById("rate_place");
+            div.innerHTML = '';
+
+            let p = document.createElement("input");
+            p.value = p.value + "\n" + evt.data
+            div.appendChild(p);
+
+        };
+
+        ws.onclose = function()
+        {
+            var div = document.getElementById("rate_place");
+            let p = document.createElement("input");
+            p.value = p.value + "\n" + "Connection closed"
+            div.appendChild(p);
+        };
+
+    }
+
+</script>
 <main>
 
     <div id="documents" class="user-padding-left" style="float: left; width: 80%">
@@ -57,12 +102,10 @@
     </div>
     <div id="exchange courses" style="float: right; width: 20%;">
         <h3>Exchange Rates</h3>
-        <ul>
-            {{range .Course}}
-                <li>1 {{.Abbreviation}} = {{.Rate}} BYN</li>
-            {{end}}
-        </ul>
+        <button onclick="javascript:myWebsocketStart()">Get exchange rates</button>
+        <div id="rate_place"></div>
     </div>
+
     <div class="page-footer font-small text-center user-footer">2020</div>
 </main>
 </body>
