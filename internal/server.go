@@ -68,8 +68,8 @@ func (s *Server) configureLogger() error {
 
 //endpoints
 func (s *Server) configureRouter() {
-	fs := http.FileServer(http.Dir("static"))
-	http.Handle("/static", http.StripPrefix("/static", fs))
+	s.router.PathPrefix("/static/").Handler(http.StripPrefix("/static",
+		http.FileServer(http.Dir("static/"))))
 
 	autorHandler := NewAutorHandler(s)
 	s.router.HandleFunc("/authorization", autorHandler.HandleAuthorize())

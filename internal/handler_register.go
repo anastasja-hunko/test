@@ -47,6 +47,7 @@ func (h *regHandler) HandleRegister() http.HandlerFunc {
 			}
 			h.serv.Logger.Info("User was created...")
 			h.serv.Respond(rw, http.StatusCreated, template, h.page)
+			return
 		}
 		template := template{
 			Pagetitle: h.title,

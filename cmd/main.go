@@ -8,7 +8,6 @@ import (
 
 func main() {
 	//init config, sessionStore and server. Then start server
-
 	config := internal.NewConfig()
 
 	sessionStore := sessions.NewCookieStore([]byte("very-secret-key"))
