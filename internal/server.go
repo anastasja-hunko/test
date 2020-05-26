@@ -33,6 +33,7 @@ func New(config *Config, sessionStore sessions.Store) *Server {
 	}
 }
 
+//start a server
 func (s *Server) Start() error {
 	if err := s.configureLogger(); err != nil {
 		return err
@@ -65,6 +66,7 @@ func (s *Server) configureLogger() error {
 	return nil
 }
 
+//endpoints
 func (s *Server) configureRouter() {
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static", http.StripPrefix("/static", fs))
@@ -90,6 +92,7 @@ func (s *Server) configureRouter() {
 
 }
 
+//configure database with config
 func (s *Server) configureDatabase() error {
 	dbase := db.New(s.config.DbConfig)
 
@@ -101,11 +104,13 @@ func (s *Server) configureDatabase() error {
 	return nil
 }
 
+//execute html template
 func executeTemplate(page string, w http.ResponseWriter, data interface{}) error {
 	tmpl := template.Must(template.ParseFiles(page))
 	return tmpl.Execute(w, data)
 }
 
+//action's respond when everything is OK
 func (s *Server) Respond(rw http.ResponseWriter, code int, data interface{}, page string) {
 	rw.WriteHeader(code)
 	if data != nil {
@@ -116,6 +121,7 @@ func (s *Server) Respond(rw http.ResponseWriter, code int, data interface{}, pag
 	}
 }
 
+//action's respond when everything is bad
 func (s *Server) Error(rw http.ResponseWriter, code int, err error) {
 	s.Respond(rw, code, err, "views/error.html")
 }

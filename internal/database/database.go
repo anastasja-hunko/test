@@ -17,6 +17,7 @@ func New(config *Config) *Database {
 	return &Database{config: config}
 }
 
+//connect to db and ping it
 func (c *Database) Open() error {
 	clientOptions := options.Client().ApplyURI(c.config.DatabaseURL)
 	client, err := mongo.Connect(context.TODO(), clientOptions)
@@ -33,10 +34,12 @@ func (c *Database) Open() error {
 	return nil
 }
 
+//close db connection
 func (c *Database) Close() error {
 	return c.db.Client().Disconnect(context.TODO())
 }
 
+//access to userCol
 func (c *Database) User() *UserCol {
 	if c.userCol == nil {
 		c.userCol = c.NewUserCol()
@@ -45,6 +48,7 @@ func (c *Database) User() *UserCol {
 	return c.userCol
 }
 
+//access to docCol
 func (c *Database) Document() *DocCol {
 	if c.docCol == nil {
 		c.docCol = c.NewDocCol()

@@ -7,6 +7,7 @@ type Config struct {
 	DocColName   string
 }
 
+//database config ...
 func NewConfig() *Config {
 	return &Config{
 		DatabaseURL:  "mongodb://localhost:27017/test_task",

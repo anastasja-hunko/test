@@ -46,6 +46,7 @@ func (h *socketHandler) Try() http.HandlerFunc {
 
 		exchange := []string{"USD", "EUR", "JPY"}
 
+		//infinite loop; for retrieving exchange rate
 		for {
 			for _, r := range exchange {
 				time.Sleep(2 * time.Second)

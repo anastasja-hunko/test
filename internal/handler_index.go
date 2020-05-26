@@ -22,7 +22,7 @@ func (h *indexHandler) HandleIndex() http.HandlerFunc {
 		if err != nil {
 			h.serv.Logger.Error(err)
 			h.page = "views/indexWhenNonAuthorized.html"
-			h.serv.Error(w, http.StatusBadRequest, err)
+			h.serv.Respond(w, http.StatusOK, err, h.page)
 			return
 		}
 		h.page = "views/indexWhenAuthorized.html"
